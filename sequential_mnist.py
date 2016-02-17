@@ -2,14 +2,32 @@ import sys
 import logging
 from collections import OrderedDict
 import numpy as np
-import util
 import theano, theano.tensor as T
 import blocks.config
 import fuel.datasets, fuel.streams, fuel.transformers, fuel.schemes
-from blocks.config import config
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+def zeros(shape):
+    return np.zeros(shape, dtype=theano.config.floatX)
+
+def ones(shape):
+    return np.ones(shape, dtype=theano.config.floatX)
+
+def glorot(shape):
+    d = np.sqrt(6. / sum(shape))
+    return np.random.uniform(-d, +d, size=shape).astype(theano.config.floatX)
+
+def orthogonal(shape):
+    # taken from https://gist.github.com/kastnerkyle/f7464d98fe8ca14f2a1a
+    """ benanne lasagne ortho init (faster than qr approach)"""
+    flat_shape = (shape[0], np.prod(shape[1:]))
+    a = np.random.normal(0.0, 1.0, flat_shape)
+    u, _, v = np.linalg.svd(a, full_matrices=False)
+    q = u if u.shape == flat_shape else v  # pick the one with the correct shape
+    q = q.reshape(shape)
+    return q[:shape[0], :shape[1]].astype(theano.config.floatX)
 
 _datasets = None
 def get_dataset(which_set):
@@ -32,46 +50,166 @@ def get_stream(which_set, batch_size, num_examples=None):
         iteration_scheme=fuel.schemes.ShuffledScheme(num_examples, batch_size))
     return stream
 
-from blocks.extensions import SimpleExtension
-from blocks.serialization import secure_dump
-class DumpVariables(SimpleExtension):
-    def __init__(self, save_path, inputs, variables, batch, **kwargs):
-        kwargs.setdefault("before_epoch", True)
-        super(DumpVariables, self).__init__(**kwargs)
-        self.save_path = save_path
-        self.variables = variables
-        self.function = theano.function(inputs, variables)
-        self.batch = batch
-        self.i = 0
+def construct_rnn(args, x):
+    h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
+    Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
+    Wx = theano.shared(orthogonal((1, args.num_hidden)), name="Wx")
 
-    def do(self, which_callback, *args):
-        if which_callback == "before_epoch":
-            values = dict((variable.name, np.asarray(value)) for variable, value in
-                          zip(self.variables, self.function(**self.batch)))
-            secure_dump(values, "%s_%i.pkl" % (self.save_path, self.i))
-            self.i += 1
+    gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
+    betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
+
+    parameters = [h0, Wh, Wx, betas]
+    if not args.baseline:
+        parameters.append(gammas)
+
+    if args.baseline:
+        def bn(x, gammas, betas):
+            return x + betas
+    else:
+        def bn(x, gammas, betas):
+            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+            #var = T.maximum(var, args.epsilon)
+            var = var + args.epsilon
+            return (x - mean) / T.sqrt(var) * gammas + betas
+
+    xtilde = T.dot(x, Wx)
+
+    if args.noise:
+        # prime h with white noise
+        Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
+        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
+    else:
+        # prime h with mean of example
+        h_prime = x.mean(axis=[0, 2])[:, None]
+
+    dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                        htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
+
+    def stepfn(xtilde, dummy_h, dummy_htilde, h):
+        htilde = dummy_htilde + T.dot(h, Wh) + xtilde
+        h = dummy_h + T.tanh(bn(htilde, gammas, betas))
+        return h, htilde
+
+    [h, htilde], _ = theano.scan(stepfn,
+                                 sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
+                                 outputs_info=[h0[None, :] + h_prime, None])
+
+    return dict(h=h, htilde=htilde), dummy_states, parameters
+
+def construct_lstm(args, x):
+    h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
+    c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
+    Wa = theano.shared(np.concatenate([
+        np.eye(args.num_hidden),
+        orthogonal((args.num_hidden, 3 * args.num_hidden)),
+    ], axis=1).astype(theano.config.floatX), name="Wa")
+    Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
+
+    a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="gammas")
+    a_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="betas")
+    a_betas.get_value(borrow=True)[args.num_hidden:2*args.num_hidden] = 1.
+    b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="gammas")
+    b_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="betas")
+    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
+    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
+
+    parameters = [h0, Wa, Wx, a_betas, h_betas]
+    if not args.baseline:
+        parameters.extend([a_gammas, h_gammas])
+
+    if args.baseline:
+        def bn(x, gammas, betas):
+            return x + betas
+    else:
+        def bn(x, gammas, betas):
+            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+            #var = T.maximum(var, args.epsilon)
+            var = var + args.epsilon
+            return (x - mean) / T.sqrt(var) * gammas + betas
+
+    xtilde = T.dot(x, Wx)
+
+    if args.noise:
+        # prime h with white noise
+        Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
+        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
+    else:
+        # prime h with mean of example
+        h_prime = x.mean(axis=[0, 2])[:, None]
+
+    dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                        c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
+
+    def stepfn(xtilde, dummy_h, dummy_c, h, c):
+        atilde = T.dot(h, Wa)
+        btilde = xtilde
+        a = bn(atilde, a_gammas, a_betas)
+        b = bn(btilde, b_gammas, b_betas)
+        arghhh = a + b
+        g, f, i, o = [fn(arghhh[:, j * args.num_hidden:(j + 1) * args.num_hidden])
+                      for j, fn in enumerate([T.tanh] + 3 * [T.nnet.sigmoid])]
+        c = dummy_c + f * c + i * g
+        htilde = c
+        h = dummy_h + o * T.tanh(bn(htilde, h_gammas, h_betas))
+        return h, c, atilde, btilde, htilde
+
+    [h, c, atilde, btilde, htilde], _ = theano.scan(
+        stepfn,
+        sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
+        outputs_info=[h0[None, :] + h_prime,
+                      T.repeat(c0[None, :], xtilde.shape[1], axis=0),
+                      None, None, None])
+    return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
 
 if __name__ == "__main__":
-    config.recursion_limit = 100000
     sequence_length = 784
     nclasses = 10
     batch_size = 100
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--activation", choices="identity relu tanh linh soft_tanh")
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--num-epochs", type=int, default=200)
+    parser.add_argument("--num-epochs", type=int, default=100)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
-    parser.add_argument("--epsilon", type=float, default=1)
-    parser.add_argument("--noise", type=float, default=1)
-    parser.add_argument("--share", action="store_true")
+    parser.add_argument("--epsilon", type=float, default=1e-5)
+    parser.add_argument("--noise", type=float, default=None)
     parser.add_argument("--num-hidden", type=int, default=100)
+    parser.add_argument("--baseline", action="store_true")
+    parser.add_argument("--lstm", action="store_true")
+    parser.add_argument("--initial-gamma", type=float, default=0.25)
+    parser.add_argument("--initial-beta", type=float, default=0)
     args = parser.parse_args()
 
     np.random.seed(args.seed)
     blocks.config.config.default_seed = args.seed
 
+    constructor = construct_lstm if args.lstm else construct_rnn
+
+    Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
+    by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
+
+    ### graph construction
+    inputs = dict(features=T.tensor4("features"), targets=T.imatrix("targets"))
+    x, y = inputs["features"], inputs["targets"]
+
+    x = x.reshape((x.shape[0], sequence_length, 1))
+    y = y.flatten(ndim=1)
+    x = x.dimshuffle(1, 0, 2)
+
+    states, dummy_states, parameters = constructor(args, x=x)
+    ytilde = T.dot(states["h"][-1], Wy) + by
+    yhat = T.nnet.softmax(ytilde)
+
+    errors = T.neq(y, T.argmax(yhat, axis=1))
+    cross_entropies = T.nnet.categorical_crossentropy(yhat, y)
+
+    error_rate = errors.mean()
+    cross_entropy = cross_entropies.mean()
+    cost = cross_entropy
+
+    state_grads = dict((k, T.grad(cost, v)) for k, v in dummy_states.items())
+
+    ### optimization algorithm definition
     from blocks.graph import ComputationGraph
     from blocks.algorithms import GradientDescent, RMSProp, StepClipping, CompositeRule, Momentum
     from blocks.model import Model
@@ -80,95 +218,15 @@ if __name__ == "__main__":
     from blocks.extensions.stopping import FinishIfNoImprovementAfter
     from blocks.extensions.training import TrackTheBest
     from blocks.extensions.saveload import Checkpoint
-    from extensions import DumpLog, DumpBest, PrintingTo
+    from extensions import DumpLog, DumpBest, PrintingTo, DumpVariables
     from blocks.main_loop import MainLoop
     from blocks.utils import shared_floatx_zeros
-
-    def glorot(shape):
-        d = np.sqrt(6. / sum(shape))
-        return np.random.uniform(-d, +d, size=shape).astype(theano.config.floatX)
-
-    def orthogonal(shape):
-        # taken from https://gist.github.com/kastnerkyle/f7464d98fe8ca14f2a1a
-        """ benanne lasagne ortho init (faster than qr approach)"""
-        flat_shape = (shape[0], np.prod(shape[1:]))
-        a = np.random.normal(0.0, 1.0, flat_shape)
-        u, _, v = np.linalg.svd(a, full_matrices=False)
-        q = u if u.shape == flat_shape else v  # pick the one with the correct shape
-        q = q.reshape(shape)
-        return q[:shape[0], :shape[1]].astype(theano.config.floatX)
-
-    h0 = theano.shared(np.zeros((args.num_hidden,), dtype=theano.config.floatX), name="h0")
-    Wh = theano.shared(np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
-    Wx = theano.shared(orthogonal((1, args.num_hidden)), name="Wx")
-    Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
-    by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
-
-    initial_gamma, initial_beta = 0.25, 0
-    if args.share:
-        gammas = theano.shared(initial_gamma * np.ones((args.num_hidden,), dtype=theano.config.floatX), name="gammas")
-        betas  = theano.shared(initial_beta  * np.ones((args.num_hidden,), dtype=theano.config.floatX), name="betas")
-    else:
-        gammas = theano.shared(initial_gamma * np.ones((784, args.num_hidden), dtype=theano.config.floatX), name="gammas")
-        betas  = theano.shared(initial_beta  * np.ones((784, args.num_hidden), dtype=theano.config.floatX), name="betas")
-
-    parameters = [h0, Wh, Wx, Wy, by, gammas, betas]
-    if args.activation == "soft_tanh":
-        parameters.extend([Ws, bs])
     from blocks.roles import add_role, PARAMETER
+
+    parameters.extend([Wy, by])
     for parameter in parameters:
         add_role(parameter, PARAMETER)
 
-    x, y = T.tensor4("features"), T.imatrix("targets")
-
-    # make sequential
-    x = x.reshape((x.shape[0], sequence_length, 1))
-    # remove bogus dimension
-    y = y.flatten(ndim=1)
-
-    # move time axis before batch axis
-    x = x.dimshuffle(1, 0, 2)
-
-    def bn(x, gamma, beta):
-        mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-        #var = T.maximum(var, args.epsilon)
-        var = var + args.epsilon
-        return (x - mean) / T.sqrt(var) * gamma + beta
-
-    xtilde = T.dot(x, Wx)
-    dummy_h = T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden))
-    dummy_htilde = T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden))
-    Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
-
-    if args.share:
-        # repeat gammas/betas over time so the call to scan is the same in both cases
-        gammas, betas = [T.repeat(var[None, :], sequence_length, axis=0)
-                         for var in (gammas, betas)]
-
-    def stepfn(xtilde, dummy_h, dummy_htilde, gamma, beta, h):
-        htilde = dummy_htilde + T.dot(h, Wh) + xtilde
-        h = dummy_h + T.tanh(bn(htilde, gamma, beta))
-        return h, htilde
-    [h, htilde], _ = theano.scan(stepfn,
-                                 sequences=[xtilde, dummy_h, dummy_htilde, gammas, betas],
-                                 outputs_info=[h0 + Trng.normal((xtilde.shape[1], nhidden), std=args.noise), None])
-
-    ytilde = T.dot(h[-1], Wy) + by
-    yhat = T.nnet.softmax(ytilde)
-
-    errors = T.neq(y, T.argmax(yhat, axis=1))
-    cross_entropy = T.nnet.categorical_crossentropy(yhat, y)
-
-    error_rate = errors.mean()
-    cross_entropy = cross_entropy.mean()
-    cost = cross_entropy
-
-    if dummy_h:
-        h_grads = T.grad(cross_entropy, dummy_h)
-    if dummy_htilde:
-        htilde_grads = T.grad(cross_entropy, dummy_htilde)
-
-    ### optimization algorithm definition
     graph = ComputationGraph(cost)
     step_rule = CompositeRule([
         StepClipping(1.),
@@ -179,26 +237,6 @@ if __name__ == "__main__":
 
     model = Model(cost)
     extensions = []
-
-    hidden_norms = []
-    hidden_grad_norms = []
-    if False:
-        timesubsample = 10
-        for t in xrange(0, sequence_length, timesubsample):
-            if dummy_h:
-                hidden_grad_norms.append(h_grads[t, :, :].norm(2).copy(name="grad_norm:h_%03i" % t))
-                hidden_grad_norms.append(h_grads[t, :, :].var(axis=0).min().copy(name="grad_minvar:h_%03i" % t))
-                hidden_grad_norms.append(h_grads[t, :, :].var(axis=0).max().copy(name="grad_maxvar:h_%03i" % t))
-            if dummy_htilde:
-                hidden_grad_norms.append(htilde_grads[t, :, :].norm(2).copy(name="grad_norm:htilde_%03i" % t))
-                hidden_grad_norms.append(htilde_grads[t, :, :].var(axis=0).min().copy(name="grad_minvar:htilde_%03i" % t))
-                hidden_grad_norms.append(htilde_grads[t, :, :].var(axis=0).max().copy(name="grad_maxvar:htilde_%03i" % t))
-            hidden_norms.append(h[t, :, :].norm(2).copy(name="norm:h_%03i" % t))
-            hidden_norms.append(h[t, :, :].var(axis=0).min().copy(name="minvar:h_%03i" % t))
-            hidden_norms.append(h[t, :, :].var(axis=0).max().copy(name="maxvar:h_%03i" % t))
-            hidden_norms.append(htilde[t, :, :].norm(2).copy(name="norm:htilde_%03i" % t))
-            hidden_norms.append(htilde[t, :, :].var(axis=0).min().copy(name="minvar:htilde_%03i" % t))
-            hidden_norms.append(htilde[t, :, :].var(axis=0).max().copy(name="maxvar:htilde_%03i" % t))
 
     # step monitor
     step_channels = []
@@ -211,7 +249,7 @@ if __name__ == "__main__":
                           error_rate.copy(name="error_rate")])
     logger.warning("constructing training data monitor")
     extensions.append(TrainingDataMonitoring(
-        step_channels + hidden_norms + hidden_grad_norms, prefix="iteration", after_batch=True))
+        step_channels, prefix="iteration", after_batch=True))
 
     # parameter monitor
     extensions.append(DataStreamMonitoring(
@@ -230,10 +268,9 @@ if __name__ == "__main__":
             data_stream=get_stream(which_set=which_set, batch_size=batch_size, num_examples=1000)))
 
     hiddenthingsdumper = DumpVariables("hiddens", graph.inputs,
-                                       [h.copy(name="h"),
-                                        h_grads.copy(name="h_grads"),
-                                        htilde.copy(name="htilde"),
-                                        htilde_grads.copy(name="htilde_grads")],
+                                       [v.copy(name="%s%s" % (k, suffix))
+                                        for suffix, things in [("", states), ("_grad", state_grads)]
+                                        for k, v in things.items()],
                                        batch=next(get_stream(which_set="train",
                                                              batch_size=batch_size,
                                                              num_examples=batch_size)
