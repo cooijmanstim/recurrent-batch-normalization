@@ -105,15 +105,14 @@ def construct_lstm(args, x):
     ], axis=1).astype(theano.config.floatX), name="Wa")
     Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
 
-    a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="gammas")
-    a_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="betas")
-    a_betas.get_value(borrow=True)[args.num_hidden:2*args.num_hidden] = 1.
-    b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="gammas")
-    b_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="betas")
-    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
-    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
+    a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
+    b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
+    ab_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
+    ab_betas.get_value(borrow=True)[args.num_hidden:2*args.num_hidden] = 1.
+    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
+    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
 
-    parameters = [h0, Wa, Wx, a_betas, h_betas]
+    parameters = [h0, Wa, Wx, ab_betas, h_betas]
     if not args.baseline:
         parameters.extend([a_gammas, h_gammas])
 
@@ -143,10 +142,10 @@ def construct_lstm(args, x):
     def stepfn(xtilde, dummy_h, dummy_c, h, c):
         atilde = T.dot(h, Wa)
         btilde = xtilde
-        a = bn(atilde, a_gammas, a_betas)
-        b = bn(btilde, b_gammas, b_betas)
-        arghhh = a + b
-        g, f, i, o = [fn(arghhh[:, j * args.num_hidden:(j + 1) * args.num_hidden])
+        a = bn(atilde, a_gammas, ab_betas)
+        b = bn(btilde, b_gammas, 0)
+        ab = a + b
+        g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                       for j, fn in enumerate([T.tanh] + 3 * [T.nnet.sigmoid])]
         c = dummy_c + f * c + i * g
         htilde = c
