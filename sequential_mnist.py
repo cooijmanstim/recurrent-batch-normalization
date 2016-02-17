@@ -177,6 +177,7 @@ if __name__ == "__main__":
     parser.add_argument("--lstm", action="store_true")
     parser.add_argument("--initial-gamma", type=float, default=0.25)
     parser.add_argument("--initial-beta", type=float, default=0)
+    parser.add_argument("--cluster", action="store_true")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -283,8 +284,12 @@ if __name__ == "__main__":
         # validation error improvements are sparse on the memory task
         #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=30),
         Checkpoint("checkpoint.zip", on_interrupt=False, every_n_epochs=1, use_cpickle=True),
-        DumpLog("log.pkl", after_epoch=True),
-        ProgressBar(),
+        DumpLog("log.pkl", after_epoch=True)])
+
+    if not args.cluster:
+        extensions.append(ProgressBar())
+
+    extensions.extend([
         Timing(),
         Printing(),
         PrintingTo("log"),
