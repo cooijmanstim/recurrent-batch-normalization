@@ -108,9 +108,13 @@ def construct_lstm(args, x):
     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
     ab_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
-    ab_betas.get_value(borrow=True)[args.num_hidden:2*args.num_hidden] = 1.
     h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
     h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
+
+    # forget gate bias initialization
+    pffft = ab_betas.get_value()
+    pffft[args.num_hidden:2*args.num_hidden] = 1.
+    ab_betas.set_value(pffft)
 
     parameters = [h0, Wa, Wx, ab_betas, h_betas]
     if not args.baseline:
