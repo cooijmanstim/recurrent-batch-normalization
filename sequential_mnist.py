@@ -50,7 +50,7 @@ def get_stream(which_set, batch_size, num_examples=None):
         iteration_scheme=fuel.schemes.ShuffledScheme(num_examples, batch_size))
     return stream
 
-def construct_rnn(args, x):
+def construct_rnn(args, x, activation):
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
     Wx = theano.shared(orthogonal((1, args.num_hidden)), name="Wx")
@@ -87,7 +87,7 @@ def construct_rnn(args, x):
 
     def stepfn(xtilde, dummy_h, dummy_htilde, h):
         htilde = dummy_htilde + T.dot(h, Wh) + xtilde
-        h = dummy_h + T.tanh(bn(htilde, gammas, betas))
+        h = dummy_h + activation(bn(htilde, gammas, betas))
         return h, htilde
 
     [h, htilde], _ = theano.scan(stepfn,
@@ -96,7 +96,7 @@ def construct_rnn(args, x):
 
     return dict(h=h, htilde=htilde), dummy_states, parameters
 
-def construct_lstm(args, x):
+def construct_lstm(args, x, activation):
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
     Wa = theano.shared(np.concatenate([
@@ -107,7 +107,7 @@ def construct_lstm(args, x):
 
     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
-    ab_betas  = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
+    ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
     h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
     h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
 
@@ -150,10 +150,10 @@ def construct_lstm(args, x):
         b = bn(btilde, b_gammas, 0)
         ab = a + b
         g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
-                      for j, fn in enumerate([T.tanh] + 3 * [T.nnet.sigmoid])]
+                      for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
         c = dummy_c + f * c + i * g
         htilde = c
-        h = dummy_h + o * T.tanh(bn(htilde, h_gammas, h_betas))
+        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas))
         return h, c, atilde, btilde, htilde
 
     [h, c, atilde, btilde, htilde], _ = theano.scan(
@@ -169,6 +169,11 @@ if __name__ == "__main__":
     nclasses = 10
     batch_size = 100
 
+    activations = dict(
+        tanh=T.tanh,
+        identity=lambda x: x,
+        relu=lambda x: T.max(0, x))
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1)
@@ -182,6 +187,7 @@ if __name__ == "__main__":
     parser.add_argument("--initial-gamma", type=float, default=0.25)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
+    parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -200,7 +206,7 @@ if __name__ == "__main__":
     y = y.flatten(ndim=1)
     x = x.dimshuffle(1, 0, 2)
 
-    states, dummy_states, parameters = constructor(args, x=x)
+    states, dummy_states, parameters = constructor(args, x=x, activation=activations[args.activation])
     ytilde = T.dot(states["h"][-1], Wy) + by
     yhat = T.nnet.softmax(ytilde)
 
