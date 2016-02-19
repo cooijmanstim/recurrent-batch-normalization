@@ -188,10 +188,17 @@ if __name__ == "__main__":
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
+    parser.add_argument("--continue-from")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
     blocks.config.config.default_seed = args.seed
+
+    if args.continue_from:
+        from blocks.serialization import load
+        main_loop = load(args.continue_from)
+        main_loop.run()
+        sys.exit(0)
 
     constructor = construct_lstm if args.lstm else construct_rnn
 
