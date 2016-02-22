@@ -70,6 +70,8 @@ def construct_rnn(args, x, activation):
         parameters.extend([gammas, betas])
         def bn(x, gammas, betas):
             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+            # if only
+            mean.tag.batchstat, var.tag.batchstat = True, True
             #var = T.maximum(var, args.epsilon)
             var = var + args.epsilon
             return (x - mean) / T.sqrt(var) * gammas + betas
@@ -130,6 +132,8 @@ def construct_lstm(args, x, activation):
         parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
         def bn(x, gammas, betas):
             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+            # if only
+            mean.tag.batchstat, var.tag.batchstat = True, True
             #var = T.maximum(var, args.epsilon)
             var = var + args.epsilon
             return (x - mean) / T.sqrt(var) * gammas + betas
