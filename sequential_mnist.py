@@ -82,9 +82,11 @@ def construct_rnn(args, x, activation):
         # prime h with white noise
         Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    if args.summarize:
+    elif args.summarize:
         # prime h with mean of example
         h_prime = x.mean(axis=[0, 2])[:, None]
+    else:
+        h_prime = 0
 
     dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
@@ -96,7 +98,8 @@ def construct_rnn(args, x, activation):
 
     [h, htilde], _ = theano.scan(stepfn,
                                  sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
-                                 outputs_info=[h0[None, :] + h_prime, None])
+                                 outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+                                               None])
 
     return dict(h=h, htilde=htilde), dummy_states, parameters
 
@@ -144,9 +147,11 @@ def construct_lstm(args, x, activation):
         # prime h with white noise
         Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    if args.summarize:
+    elif args.summarize:
         # prime h with mean of example
         h_prime = x.mean(axis=[0, 2])[:, None]
+    else:
+        h_prime = 0
 
     dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
@@ -167,7 +172,7 @@ def construct_lstm(args, x, activation):
     [h, c, atilde, btilde, htilde], _ = theano.scan(
         stepfn,
         sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-        outputs_info=[h0[None, :] + h_prime,
+        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
                       T.repeat(c0[None, :], xtilde.shape[1], axis=0),
                       None, None, None])
     return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters

@@ -115,11 +115,13 @@ def construct_rnn(args, nclasses, x, activation):
         # prime h with white noise
         Trng = MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    if args.summarize:
+    elif args.summarize:
         # prime h with summary of example
         Winit = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Winit")
         parameters.append(Winit)
         h_prime = T.dot(x, Winit).mean(axis=0)
+    else:
+        h_prime = 0
 
     dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
@@ -131,7 +133,8 @@ def construct_rnn(args, nclasses, x, activation):
 
     [h, htilde], _ = theano.scan(stepfn,
                                  sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
-                                 outputs_info=[h0[None, :] + h_prime, None])
+                                 outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+                                               None])
 
     return dict(h=h, htilde=htilde), dummy_states, parameters
 
@@ -179,11 +182,13 @@ def construct_lstm(args, nclasses, x, activation):
         # prime h with white noise
         Trng = MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    if args.summarize:
+    elif args.summarize:
         # prime h with summary of example
         Winit = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Winit")
         parameters.append(Winit)
         h_prime = T.dot(x, Winit).mean(axis=0)
+    else:
+        h_prime = 0
 
     dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
@@ -204,7 +209,7 @@ def construct_lstm(args, nclasses, x, activation):
     [h, c, atilde, btilde, htilde], _ = theano.scan(
         stepfn,
         sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-        outputs_info=[h0[None, :] + h_prime,
+        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
                       T.repeat(c0[None, :], xtilde.shape[1], axis=0),
                       None, None, None])
     return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
