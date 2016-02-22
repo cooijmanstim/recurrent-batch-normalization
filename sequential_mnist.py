@@ -51,21 +51,23 @@ def get_stream(which_set, batch_size, num_examples=None):
     return stream
 
 def construct_rnn(args, x, activation):
+    parameters = []
+
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
     Wx = theano.shared(orthogonal((1, args.num_hidden)), name="Wx")
 
+    parameters.extend([h0, Wh, Wx])
+
     gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
     betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
 
-    parameters = [h0, Wh, Wx, betas]
-    if not args.baseline:
-        parameters.append(gammas)
-
     if args.baseline:
+        parameters.extend([betas])
         def bn(x, gammas, betas):
             return x + betas
     else:
+        parameters.extend([gammas, betas])
         def bn(x, gammas, betas):
             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
             #var = T.maximum(var, args.epsilon)
@@ -97,6 +99,8 @@ def construct_rnn(args, x, activation):
     return dict(h=h, htilde=htilde), dummy_states, parameters
 
 def construct_lstm(args, x, activation):
+    parameters = []
+
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
     Wa = theano.shared(np.concatenate([
@@ -104,6 +108,8 @@ def construct_lstm(args, x, activation):
         orthogonal((args.num_hidden, 3 * args.num_hidden)),
     ], axis=1).astype(theano.config.floatX), name="Wa")
     Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
+
+    parameters.extend([h0, c0, Wa, Wx])
 
     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
@@ -116,14 +122,12 @@ def construct_lstm(args, x, activation):
     pffft[args.num_hidden:2*args.num_hidden] = 1.
     ab_betas.set_value(pffft)
 
-    parameters = [h0, Wa, Wx, ab_betas, h_betas]
-    if not args.baseline:
-        parameters.extend([a_gammas, h_gammas])
-
     if args.baseline:
+        parameters.extend([ab_betas, h_betas])
         def bn(x, gammas, betas):
             return x + betas
     else:
+        parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
         def bn(x, gammas, betas):
             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
             #var = T.maximum(var, args.epsilon)
