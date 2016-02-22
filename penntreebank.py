@@ -212,7 +212,6 @@ def construct_lstm(args, nclasses, x, activation):
 if __name__ == "__main__":
     sequence_length = 50
     nclasses = 50
-    batch_size = 100
 
     activations = dict(
         tanh=T.tanh,
@@ -223,6 +222,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--num-epochs", type=int, default=100)
+    parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--epsilon", type=float, default=1e-5)
     parser.add_argument("--noise", type=float, default=None)
@@ -331,7 +331,7 @@ if __name__ == "__main__":
         extensions.append(DataStreamMonitoring(
             channels,
             prefix=which_set, after_epoch=True,
-            data_stream=get_stream(which_set=which_set, batch_size=batch_size,
+            data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
                                    num_examples=1000, length=sequence_length)))
 
     hiddenthingsdumper = DumpVariables("hiddens", graph.inputs,
@@ -339,8 +339,8 @@ if __name__ == "__main__":
                                         for suffix, things in [("", states), ("_grad", state_grads)]
                                         for k, v in things.items()],
                                        batch=next(get_stream(which_set="train",
-                                                             batch_size=batch_size,
-                                                             num_examples=batch_size,
+                                                             batch_size=args.batch_size,
+                                                             num_examples=args.batch_size,
                                                              length=sequence_length)
                                                   .get_epoch_iterator(as_dict=True)))
 
@@ -363,7 +363,7 @@ if __name__ == "__main__":
         PrintingTo("log"),
     ])
     main_loop = MainLoop(
-        data_stream=get_stream(which_set="train", batch_size=batch_size, length=sequence_length),
+        data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=sequence_length),
         algorithm=algorithm, extensions=extensions, model=model)
 
     #from tabulate import tabulate
