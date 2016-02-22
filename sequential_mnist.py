@@ -197,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--continue-from")
+    parser.add_argument("--permuted", action="store_true")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -207,6 +208,9 @@ if __name__ == "__main__":
         main_loop = load(args.continue_from)
         main_loop.run()
         sys.exit(0)
+
+    if args.permuted:
+        permutation = np.random.randint(0, sequence_length, size=(sequence_length,))
 
     constructor = construct_lstm if args.lstm else construct_rnn
 
@@ -220,6 +224,9 @@ if __name__ == "__main__":
     x = x.reshape((x.shape[0], sequence_length, 1))
     y = y.flatten(ndim=1)
     x = x.dimshuffle(1, 0, 2)
+
+    if args.permuted:
+        x = x[permutation]
 
     states, dummy_states, parameters = constructor(args, x=x, activation=activations[args.activation])
     ytilde = T.dot(states["h"][-1], Wy) + by
