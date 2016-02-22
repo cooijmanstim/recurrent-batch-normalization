@@ -82,7 +82,7 @@ def construct_rnn(args, x, activation):
         # prime h with white noise
         Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    else:
+    if args.summarize:
         # prime h with mean of example
         h_prime = x.mean(axis=[0, 2])[:, None]
 
@@ -144,7 +144,7 @@ def construct_lstm(args, x, activation):
         # prime h with white noise
         Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    else:
+    if args.summarize:
         # prime h with mean of example
         h_prime = x.mean(axis=[0, 2])[:, None]
 
@@ -189,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--epsilon", type=float, default=1e-5)
     parser.add_argument("--noise", type=float, default=None)
+    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--num-hidden", type=int, default=100)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
@@ -199,6 +200,8 @@ if __name__ == "__main__":
     parser.add_argument("--continue-from")
     parser.add_argument("--permuted", action="store_true")
     args = parser.parse_args()
+
+    assert not (args.noise and args.summarize)
 
     np.random.seed(args.seed)
     blocks.config.config.default_seed = args.seed
