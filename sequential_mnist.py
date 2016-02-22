@@ -306,7 +306,8 @@ if __name__ == "__main__":
                                        batch=next(get_stream(which_set="train",
                                                              batch_size=batch_size,
                                                              num_examples=batch_size)
-                                                  .get_epoch_iterator(as_dict=True)))
+                                                  .get_epoch_iterator(as_dict=True)),
+                                       before_training=True, every_n_epochs=10)
 
     extensions.extend([
         hiddenthingsdumper,

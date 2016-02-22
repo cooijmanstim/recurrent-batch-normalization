@@ -88,7 +88,6 @@ class StepMemory(StepRule):
 
 class DumpVariables(SimpleExtension):
     def __init__(self, save_path, inputs, variables, batch, **kwargs):
-        kwargs.setdefault("before_epoch", True)
         super(DumpVariables, self).__init__(**kwargs)
         self.save_path = save_path
         self.variables = variables
