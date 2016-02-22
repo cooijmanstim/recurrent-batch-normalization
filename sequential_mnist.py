@@ -3,6 +3,7 @@ import logging
 from collections import OrderedDict
 import numpy as np
 import theano, theano.tensor as T
+from theano.sandbox.rng_mrg import MRG_RandomStreams
 import blocks.config
 import fuel.datasets, fuel.streams, fuel.transformers, fuel.schemes
 
@@ -80,7 +81,7 @@ def construct_rnn(args, x, activation):
 
     if args.noise:
         # prime h with white noise
-        Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
+        Trng = MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
     elif args.summarize:
         # prime h with mean of example
@@ -145,7 +146,7 @@ def construct_lstm(args, x, activation):
 
     if args.noise:
         # prime h with white noise
-        Trng = theano.sandbox.rng_mrg.MRG_RandomStreams()
+        Trng = MRG_RandomStreams()
         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
     elif args.summarize:
         # prime h with mean of example
