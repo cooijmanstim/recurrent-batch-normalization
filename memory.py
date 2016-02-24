@@ -205,7 +205,6 @@ def construct_lstm(args, x, activation):
 
 if __name__ == "__main__":
     nclasses = 10
-    nhidden = 80
     batch_size = 100
 
     activations = dict(
@@ -272,7 +271,6 @@ if __name__ == "__main__":
     y = y.dimshuffle(1, 0, 2)
     mask = mask.dimshuffle(1, 0)
 
-    mask = mask.dimshuffle(1, 0)
     states, dummy_states, parameters = constructor(args, x=x, activation=activations[args.activation])
 
     ytilde = T.dot(states["h"], Wy) + by
@@ -369,7 +367,7 @@ if __name__ == "__main__":
                                        before_training=True, every_n_epochs=10)
 
     extensions.extend([
-        #hiddenthingsdumper,
+        hiddenthingsdumper,
         TrackTheBest("valid_error_rate", "best_valid_error_rate"),
         DumpBest("best_valid_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
