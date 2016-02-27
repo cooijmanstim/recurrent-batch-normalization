@@ -1,0 +1,229 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips15submit_e,times}
+\usepackage{hyperref}
+\usepackage{url}
+%\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
+
+\title{Normalisation aux batches des resaux neurales recurrents}
+
+\author{
+Me \\
+\And
+Nicolas \\
+\And
+C\'esar \\
+\And
+Aaron
+\texttt{email} \\
+}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\nipsfinalcopy % Uncomment for camera-ready version
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\act}{f}
+\newcommand{\ewprod}{\odot}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\given}{\vert}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\,Ca marche!
+\end{abstract}
+
+\section{Introduction}
+
+\section{Prerequisites}
+\subsection{Recurrent neural networks}
+
+Given an input sequence $\mat{X} = ( \vect{x}^{(1)}, \vect{x}^{(2)}, ... \vect{x}^{(T)} )$,
+
+\begin{align}
+\vect{h}^{(t)} = f(
+  \vect{h}^{(t-1)} \mat{W}_h +
+  \vect{x}^{(t  )} \mat{W}_x +
+  \vect{b})
+\end{align}
+
+where $\mat{W}_h \in \reals^{d_h \times d_h},
+       \mat{W}_x \in \reals^{d_x \times d_h},
+       \vect{b} \in \reals^{d_h}$
+  and $\vect{h}^{(0)} \in \reals^{d_h}$
+  are model parameters.
+
+Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
+
+However these models are hard to optimize due to vanishing/exploding gradients.
+To see this, consider the Jacobian of the last hidden state with respect to the first hidden state:
+
+\begin{align}
+\frac{d \vect{h}^{(T)}}
+     {d \vect{h}^{(0)}}
+ =
+\frac{d \vect{h}^{(1)}}
+     {d \vect{h}^{(0)}}
+\frac{d \vect{h}^{(2)}}
+     {d \vect{h}^{(1)}}
+\cdots
+\frac{d \vect{h}^{(T)}}
+     {d \vect{h}^{(T - 1)}}
+ =
+\prod_{t = 1}^{T}
+\frac{d \vect{h}^{(t)}}
+     {d \vect{h}^{(t - 1)}}
+\end{align}
+
+some of the eigenvalues of which either exponentially decay or diverge as $t \to \infty$ unless the Jacobian
+$\frac{d \vect{h}^{(t)}}
+      {d \vect{h}^{(t - 1)}}$
+is orthogonal.
+
+Several approaches to this problem have been explored.
+
+reparameterizations:
+LSTM
+unitary RNN
+
+optimization algorithms:
+step clipping
+hessian-free
+yann ollivier
+
+We focus on LSTMs, with recurrent transition given by
+
+\begin{align}
+\left(\begin{array}{ccc}
+\vect{f}^{(t)} \\
+\vect{i}^{(t)} \\
+\vect{o}^{(t)} \\
+\vect{g}^{(t)}
+\end{array}\right)
+ &=
+\left(\begin{array}{ccc}
+\sigma \\
+\sigma \\
+\sigma \\
+\tanh
+\end{array}\right)
+\left(
+ \vect{h}^{(t-1)} \mat{W}_h +
+ \vect{x}^{(t)}   \mat{W}_x +
+ \vect{b}
+\right) \\
+\vect{c}^{(t)} &= \vect{f}^{(t)} \ewprod \vect{c}^{(t-1)} +
+                  \vect{i}^{(t)} \ewprod \vect{g}^{(t)} \\
+\vect{h}^{(t)} &= \vect{o}^{(t)} \ewprod \tanh(\vect{c}^{(t)})
+\end{align}
+
+where $\vect{W_h} \in \reals^{d_h \times 4 d_h}, \vect{W_x} \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and $\vect{c}^{(0)}, \vect{h}^{(0)} \in \reals^{d_h}$ are model parameters.
+The $\ewprod$ operator denotes the elementwise product.
+
+Intuitively, LSTM improves on standard RNN in two ways.
+First, it has an additional recurrent \emph{cell} state $\vect{c}^{(t)}$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
+Second, communication between this state and $\vect{h}^{(t)}$ and $\vect{x}^{(t)}$ is controlled by the gates $\vect{f}^{(t)}$, $\vect{i}^{(t)}$ and $\vect{o}^{(t)}$.
+
+\subsection{Batch normalization}
+
+Batch normalization is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
+The batch normalizing transform is as follows:
+
+\begin{align}
+\mathrm{BN}(h; \gamma, \beta) =
+  \beta + \gamma
+  \frac{h -   \widehat{\mathrm{Mean}}(\mathcal{H})}
+       {\sqrt{\widehat{\mathrm{Var }}(\mathcal{H}) + \epsilon}}
+\end{align}
+
+where $h \in \reals$ is the (pre)activation to be normalized, $\gamma \in \reals, \beta \in \reals$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
+
+$\mathcal{H}$ is distributed according to $p(\mathcal{H}|\mathcal{X}) p(\mathcal{X})$ with $p(\mathcal{X})$ being the data distribution.
+At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(\mathcal{H})$ are estimated by the sample mean and sample variance of the current minibatch.
+This allows for backpropation through the statistics, preserving the convergence properties of stochastic gradient descent.
+During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
+
+Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
+Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
+Deep neural networks trained with batch normalization converge significantly faster and generalize better.
+
+However, applying batch normalization to recurrent neural networks has proven to be challenging.
+\cite{Baidu} use it in a stack of LSTMs, but normalize only the input terms and not the recurrent terms.
+\cite{Cesar} doesn't believe in it!
+My bro \cite{Tim Salimans} recently proposed a scheme to normalize weights that they show has a similar effect to batch normalization but might be easier to apply in the recurrent setting.
+
+A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
+However, such unrolled networks differ from true feedforward networks in several important respects:
+\begin{itemize}
+\item The parameters are shared across layers.
+\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}^{(t)})$, which is typically not constant.
+\item There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
+\item The initial states $\vect{h}^{(0)}$ are independent of the input and thus have zero variance.
+\end{itemize}
+
+All of these complicate the application of batch normalization in recurrent neural networks.
+Despite these issues, however, it seems to us that batch normalization should be especially helpful for recurrent neural networks.
+It keeps the recurrent system's dynamics in check and may provide a way around the notorious issue of vanishing and exploding gradients.
+
+[TODO: see if we can prove anything about the effect on the jacobian dh/dh]
+
+For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
+
+\section{Batch-normalized LSTM}
+
+We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM transition as follows:
+
+\begin{align}
+\left(\begin{array}{ccc}
+\vect{f}^{(t)} \\
+\vect{i}^{(t)} \\
+\vect{o}^{(t)} \\
+\vect{g}^{(t)}
+\end{array}\right)
+ &=
+\left(\begin{array}{ccc}
+\sigma \\
+\sigma \\
+\sigma \\
+\tanh
+\end{array}\right)
+\left(
+ \mathrm{BN} (\vect{h}^{(t-1)} \mat{W}_h; \vect{\gamma}_h, \vect{\beta}_h) +
+ \mathrm{BN} (\vect{x}^{(t)}   \mat{W}_x; \vect{\gamma}_x, \vect{\beta}_x) +
+ \vect{b}
+\right) \\
+\vect{c}^{(t)} &= \vect{f}^{(t)} \ewprod \vect{c}^{(t-1)} +
+                  \vect{i}^{(t)} \ewprod \vect{g}^{(t)} \\
+\vect{h}^{(t)} &= \vect{o}^{(t)} \ewprod \tanh(
+ \mathrm{BN} (\vect{c}^{(t)}; \vect{\gamma}_c, \vect{\beta}_c)
+)
+\end{align}
+
+Note how we normalize the recurrent term $\vect{h}^{(t-1)} \mat{W}_h$ and the input term $\vect{x}^{(t)} \mat{W}_x$ separately.
+This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
+To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on a single parameter vector $\vect{b}$ to account for both biases.
+
+During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
+During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
+
+\section{Experiments}
+
+\subsection{Sequential MNIST}
+(includes permuted MNIS)
+
+\subsection{Character-level Penn Treebank}
+
+\subsection{TIMIT}
+
+\subsection{Memory Networks}
+
+\section{Conclusion}
+
+\end{document}
