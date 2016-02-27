@@ -45,19 +45,19 @@ Aaron
 \section{Prerequisites}
 \subsection{Recurrent neural networks}
 
-Given an input sequence $\mat{X} = ( \vect{x}^{(1)}, \vect{x}^{(2)}, ... \vect{x}^{(T)} )$,
+Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$,
 
 \begin{align}
-\vect{h}^{(t)} = f(
-  \vect{h}^{(t-1)} \mat{W}_h +
-  \vect{x}^{(t  )} \mat{W}_x +
+\vect{h}_t = f(
+  \vect{h}_{t-1} \mat{W}_h +
+  \vect{x}_t     \mat{W}_x +
   \vect{b})
 \end{align}
 
 where $\mat{W}_h \in \reals^{d_h \times d_h},
        \mat{W}_x \in \reals^{d_x \times d_h},
        \vect{b} \in \reals^{d_h}$
-  and $\vect{h}^{(0)} \in \reals^{d_h}$
+  and the initial state $\vect{h}_0 \in \reals^{d_h}$
   are model parameters.
 
 Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
@@ -66,25 +66,25 @@ However these models are hard to optimize due to vanishing/exploding gradients.
 To see this, consider the Jacobian of the last hidden state with respect to the first hidden state:
 
 \begin{align}
-\frac{d \vect{h}^{(T)}}
-     {d \vect{h}^{(0)}}
+\frac{d \vect{h}_T}
+     {d \vect{h}_0}
  =
-\frac{d \vect{h}^{(1)}}
-     {d \vect{h}^{(0)}}
-\frac{d \vect{h}^{(2)}}
-     {d \vect{h}^{(1)}}
+\frac{d \vect{h}_1}
+     {d \vect{h}_0}
+\frac{d \vect{h}_2}
+     {d \vect{h}_1}
 \cdots
-\frac{d \vect{h}^{(T)}}
-     {d \vect{h}^{(T - 1)}}
+\frac{d \vect{h}_T}
+     {d \vect{h}_{T-1}}
  =
 \prod_{t = 1}^{T}
-\frac{d \vect{h}^{(t)}}
-     {d \vect{h}^{(t - 1)}}
+\frac{d \vect{h}_t}
+     {d \vect{h}_{t-1}}
 \end{align}
 
-some of the eigenvalues of which either exponentially decay or diverge as $t \to \infty$ unless the Jacobian
-$\frac{d \vect{h}^{(t)}}
-      {d \vect{h}^{(t - 1)}}$
+some of the eigenvalues of which either exponentially decay or diverge as $T \to \infty$ unless the Jacobian
+$\frac{d \vect{h}_t}
+      {d \vect{h}_{t-1}}$
 is orthogonal.
 
 Several approaches to this problem have been explored.
@@ -102,10 +102,10 @@ We focus on LSTMs, with recurrent transition given by
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}^{(t)} \\
-\vect{i}^{(t)} \\
-\vect{o}^{(t)} \\
-\vect{g}^{(t)}
+\vect{f}_t \\
+\vect{i}_t \\
+\vect{o}_t \\
+\vect{g}_t
 \end{array}\right)
  &=
 \left(\begin{array}{ccc}
@@ -115,21 +115,21 @@ We focus on LSTMs, with recurrent transition given by
 \tanh
 \end{array}\right)
 \left(
- \vect{h}^{(t-1)} \mat{W}_h +
- \vect{x}^{(t)}   \mat{W}_x +
+ \vect{h}_{t-1} \mat{W}_h +
+ \vect{x}_t    \mat{W}_x +
  \vect{b}
 \right) \\
-\vect{c}^{(t)} &= \vect{f}^{(t)} \ewprod \vect{c}^{(t-1)} +
-                  \vect{i}^{(t)} \ewprod \vect{g}^{(t)} \\
-\vect{h}^{(t)} &= \vect{o}^{(t)} \ewprod \tanh(\vect{c}^{(t)})
+\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
+              \vect{i}_t \ewprod \vect{g}_t \\
+\vect{h}_t &= \vect{o}_t \ewprod \tanh(\vect{c}_t)
 \end{align}
 
-where $\vect{W_h} \in \reals^{d_h \times 4 d_h}, \vect{W_x} \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and $\vect{c}^{(0)}, \vect{h}^{(0)} \in \reals^{d_h}$ are model parameters.
+where $\vect{W_h} \in \reals^{d_h \times 4 d_h}, \vect{W_x} \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and the initial states $\vect{c}_0, \vect{h}_0 \in \reals^{d_h}$ are model parameters.
 The $\ewprod$ operator denotes the elementwise product.
 
 Intuitively, LSTM improves on standard RNN in two ways.
-First, it has an additional recurrent \emph{cell} state $\vect{c}^{(t)}$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
-Second, communication between this state and $\vect{h}^{(t)}$ and $\vect{x}^{(t)}$ is controlled by the gates $\vect{f}^{(t)}$, $\vect{i}^{(t)}$ and $\vect{o}^{(t)}$.
+First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
+Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
 
 \subsection{Batch normalization}
 
@@ -163,9 +163,9 @@ A recurrent neural network can be ``unrolled'' and viewed as a feedforward neura
 However, such unrolled networks differ from true feedforward networks in several important respects:
 \begin{itemize}
 \item The parameters are shared across layers.
-\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}^{(t)})$, which is typically not constant.
+\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
 \item There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-\item The initial states $\vect{h}^{(0)}$ are independent of the input and thus have zero variance.
+\item The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
 \end{itemize}
 
 All of these complicate the application of batch normalization in recurrent neural networks.
@@ -182,10 +182,10 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}^{(t)} \\
-\vect{i}^{(t)} \\
-\vect{o}^{(t)} \\
-\vect{g}^{(t)}
+\vect{f}_t \\
+\vect{i}_t \\
+\vect{o}_t \\
+\vect{g}_t
 \end{array}\right)
  &=
 \left(\begin{array}{ccc}
@@ -195,18 +195,18 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 \tanh
 \end{array}\right)
 \left(
- \mathrm{BN} (\vect{h}^{(t-1)} \mat{W}_h; \vect{\gamma}_h, \vect{\beta}_h) +
- \mathrm{BN} (\vect{x}^{(t)}   \mat{W}_x; \vect{\gamma}_x, \vect{\beta}_x) +
+ \mathrm{BN} (\vect{h}_{t-1} \mat{W}_h; \vect{\gamma}_h, \vect{\beta}_h) +
+ \mathrm{BN} (\vect{x}_t    \mat{W}_x; \vect{\gamma}_x, \vect{\beta}_x) +
  \vect{b}
 \right) \\
-\vect{c}^{(t)} &= \vect{f}^{(t)} \ewprod \vect{c}^{(t-1)} +
-                  \vect{i}^{(t)} \ewprod \vect{g}^{(t)} \\
-\vect{h}^{(t)} &= \vect{o}^{(t)} \ewprod \tanh(
- \mathrm{BN} (\vect{c}^{(t)}; \vect{\gamma}_c, \vect{\beta}_c)
+\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
+              \vect{i}_t \ewprod \vect{g}_t \\
+\vect{h}_t &= \vect{o}_t \ewprod \tanh(
+ \mathrm{BN} (\vect{c}_t; \vect{\gamma}_c, \vect{\beta}_c)
 )
 \end{align}
 
-Note how we normalize the recurrent term $\vect{h}^{(t-1)} \mat{W}_h$ and the input term $\vect{x}^{(t)} \mat{W}_x$ separately.
+Note how we normalize the recurrent term $\vect{h}_{t-1} \mat{W}_h$ and the input term $\vect{x}_t \mat{W}_x$ separately.
 This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
 To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on a single parameter vector $\vect{b}$ to account for both biases.
 
