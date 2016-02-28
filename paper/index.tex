@@ -62,7 +62,7 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
 
 Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
-However these models are hard to optimize due to vanishing/exploding gradients.
+However these models can be hard to optimize due to vanishing/exploding gradients.
 To see this, consider the Jacobian of the last hidden state with respect to the first hidden state:
 
 \begin{align}
@@ -82,10 +82,16 @@ To see this, consider the Jacobian of the last hidden state with respect to the 
      {d \vect{h}_{t-1}}
 \end{align}
 
-some of the eigenvalues of which either exponentially decay or diverge as $T \to \infty$ unless the Jacobian
-$\frac{d \vect{h}_t}
-      {d \vect{h}_{t-1}}$
-is orthogonal.
+some of the eigenvalues of which either exponentially decay or diverge as $T \to \infty$ unless the sequence  of Jacobians
+
+\begin{align}
+\frac{d \vect{h}_t}
+     {d \vect{h}_{t-1}}
+ =
+\mat{W} \mathrm{diag}(f'(\vect{h_{t-1}}))
+\end{align}
+
+is well-behaved.
 
 Several approaches to this problem have been explored.
 
@@ -150,6 +156,8 @@ At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(
 This allows for backpropation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
+For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
+
 Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
@@ -169,12 +177,6 @@ However, such unrolled networks differ from true feedforward networks in several
 \end{itemize}
 
 All of these complicate the application of batch normalization in recurrent neural networks.
-Despite these issues, however, it seems to us that batch normalization should be especially helpful for recurrent neural networks.
-It keeps the recurrent system's dynamics in check and may provide a way around the notorious issue of vanishing and exploding gradients.
-
-[TODO: see if we can prove anything about the effect on the jacobian dh/dh]
-
-For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
 
 \section{Batch-normalized LSTM}
 
