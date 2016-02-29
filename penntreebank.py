@@ -187,7 +187,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=100)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initial-gamma", type=float, default=1e-2)
+    parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
