@@ -340,7 +340,7 @@ if __name__ == "__main__":
             channels,
             prefix=which_set, after_epoch=True,
             data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
-                                   num_examples=1000, length=sequence_length)))
+                                   num_examples=50000, length=sequence_length)))
 
     hiddenthingsdumper = DumpVariables("hiddens", graph.inputs,
                                        [v.copy(name="%s%s" % (k, suffix))
