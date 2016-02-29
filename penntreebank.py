@@ -65,16 +65,8 @@ class PTB(fuel.datasets.Dataset):
             assert np.allclose(batch.sum(axis=2), 1)
         return (batch,)
 
-_datasets = None
 def get_dataset(which_set, length):
-    global _datasets
-    if not _datasets:
-        # jump through hoops to instantiate only once and only if needed
-        _datasets = dict(
-            train=PTB(which_set="train", length=length),
-            valid=PTB(which_set="valid", length=length),
-            test=PTB(which_set="test", length=length))
-    return _datasets[which_set]
+    return PTB(which_set=which_set, length=length)
 
 def get_stream(which_set, batch_size, length, num_examples=None):
     dataset = get_dataset(which_set, length=length)
