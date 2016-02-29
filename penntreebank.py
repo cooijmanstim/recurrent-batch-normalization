@@ -77,62 +77,41 @@ def get_stream(which_set, batch_size, length, num_examples=None):
         iteration_scheme=fuel.schemes.ShuffledScheme(num_examples, batch_size))
     return stream
 
-def construct_rnn(args, nclasses, x, activation):
-    parameters = []
+def bn(x, gammas, betas, args):
+    if args.baseline:
+        return x + betas
+    mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+    # if only
+    mean.tag.batchstat, var.tag.batchstat = True, True
+    #var = T.maximum(var, args.epsilon)
+    var = var + args.epsilon
+    return theano.tensor.nnet.bn.batch_normalization(
+        inputs=x, gamma=gammas, beta=betas,
+        mean=mean, std=T.sqrt(var))
 
+def construct_rnn(args, nclasses, x, activation):
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
     Wx = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Wx")
-    parameters.extend([h0, Wh, Wx])
-
     gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
     betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
-    if args.baseline:
-        parameters.append(betas)
-        def bn(x, gammas, betas):
-            return x + betas
-    else:
-        parameters.extend([gammas, betas])
-        def bn(x, gammas, betas):
-            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-            # if only
-            mean.tag.batchstat, var.tag.batchstat = True, True
-            #var = T.maximum(var, args.epsilon)
-            var = var + args.epsilon
-            return (x - mean) / T.sqrt(var) * gammas + betas
+    parameters = ([h0, Wh, Wx, gammas, betas])
 
     xtilde = T.dot(x, Wx)
-
-    if args.noise:
-        # prime h with white noise
-        Trng = MRG_RandomStreams()
-        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    elif args.summarize:
-        # prime h with summary of example
-        Winit = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Winit")
-        parameters.append(Winit)
-        h_prime = T.dot(x, Winit).mean(axis=0)
-    else:
-        h_prime = 0
-
     dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
-
     def stepfn(xtilde, dummy_h, dummy_htilde, h):
         htilde = dummy_htilde + T.dot(h, Wh) + xtilde
-        h = dummy_h + activation(bn(htilde, gammas, betas))
+        h = dummy_h + activation(bn(htilde, gammas, betas, args))
         return h, htilde
-
-    [h, htilde], _ = theano.scan(stepfn,
-                                 sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
-                                 outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
-                                               None])
-
+    [h, htilde], _ = theano.scan(
+        stepfn,
+        sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
+        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0),
+                      None])
     return dict(h=h, htilde=htilde), dummy_states, parameters
 
 def construct_lstm(args, nclasses, x, activation):
-    parameters = []
-
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
     Wa = theano.shared(np.concatenate([
@@ -140,8 +119,6 @@ def construct_lstm(args, nclasses, x, activation):
         orthogonal((args.num_hidden, 3 * args.num_hidden)),
     ], axis=1).astype(theano.config.floatX), name="Wa")
     Wx = theano.shared(orthogonal((nclasses, 4 * args.num_hidden)), name="Wx")
-
-    parameters.extend([h0, c0, Wa, Wx])
 
     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
@@ -154,54 +131,27 @@ def construct_lstm(args, nclasses, x, activation):
     pffft[args.num_hidden:2*args.num_hidden] = 1.
     ab_betas.set_value(pffft)
 
-    if args.baseline:
-        parameters.extend([ab_betas, h_betas])
-        def bn(x, gammas, betas):
-            return x + betas
-    else:
-        parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
-        def bn(x, gammas, betas):
-            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-            # if only
-            mean.tag.batchstat, var.tag.batchstat = True, True
-            #var = T.maximum(var, args.epsilon)
-            var = var + args.epsilon
-            return (x - mean) / T.sqrt(var) * gammas + betas
+    parameters = [h0, c0, Wa, Wx, a_gammas, b_gammas, ab_betas, h_gammas, h_betas]
 
     xtilde = T.dot(x, Wx)
-
-    if args.noise:
-        # prime h with white noise
-        Trng = MRG_RandomStreams()
-        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    elif args.summarize:
-        # prime h with summary of example
-        Winit = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Winit")
-        parameters.append(Winit)
-        h_prime = T.dot(x, Winit).mean(axis=0)
-    else:
-        h_prime = 0
-
     dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
-
     def stepfn(xtilde, dummy_h, dummy_c, h, c):
         atilde = T.dot(h, Wa)
         btilde = xtilde
-        a = bn(atilde, a_gammas, ab_betas)
-        b = bn(btilde, b_gammas, 0)
+        a = bn(atilde, a_gammas, ab_betas, args)
+        b = bn(btilde, b_gammas, 0, args)
         ab = a + b
         g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                       for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
         c = dummy_c + f * c + i * g
         htilde = c
-        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas))
+        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas, args))
         return h, c, atilde, btilde, htilde
-
     [h, c, atilde, btilde, htilde], _ = theano.scan(
         stepfn,
         sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0),
                       T.repeat(c0[None, :], xtilde.shape[1], axis=0),
                       None, None, None])
     return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
@@ -222,8 +172,6 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--epsilon", type=float, default=1e-5)
-    parser.add_argument("--noise", type=float, default=None)
-    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--num-hidden", type=int, default=100)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
@@ -233,8 +181,6 @@ if __name__ == "__main__":
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
-
-    assert not (args.noise and args.summarize)
 
     np.random.seed(args.seed)
     blocks.config.config.default_seed = args.seed
@@ -350,8 +296,7 @@ if __name__ == "__main__":
         TrackTheBest("valid_error_rate", "best_valid_error_rate"),
         DumpBest("best_valid_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
-        # validation error improvements are sparse on the memory task
-        #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=30),
+        #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=50),
         Checkpoint("checkpoint.zip", on_interrupt=False, every_n_epochs=1, use_cpickle=True),
         DumpLog("log.pkl", after_epoch=True)])
 
@@ -366,10 +311,4 @@ if __name__ == "__main__":
     main_loop = MainLoop(
         data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=sequence_length),
         algorithm=algorithm, extensions=extensions, model=model)
-
-    #from tabulate import tabulate
-    #print "parameter sizes:"
-    #print tabulate((key, "x".join(map(str, value.get_value().shape)), value.get_value().size)
-    #               for key, value in main_loop.model.get_parameter_dict().items())
-
     main_loop.run()
