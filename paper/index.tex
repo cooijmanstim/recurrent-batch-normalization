@@ -42,6 +42,20 @@ Aaron
 
 \section{Introduction}
 
+[Given ill-conditioning, acceptable optimization can still be obtained by better optimization algorithms, such as
+Hessian-Free~\cite{hessianfree} or the various approximations to natural gradient proposed in~\cite{ollivier} and~\cite{KFAC}.
+
+Alternatively, the conditioning problem can also be addressed through model reparameterizations.
+\cite{lecun}, \cite{raiko}, \cite{pascanu}, \cite{desjardins}.
+batch normalization is one of these.]
+
+Batch normalization~\cite{ioffe2015batch} greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
+
+However, applying batch normalization in recurrent neural networks has proven to be challenging.
+In \cite{Baidu} batch normalization is applied in a stack of recurrent neural networks, but only to the input terms and not to the recurrent terms.
+\cite{Cesar} 
+Recently, a related technique called weight normalization~\cite{salimans2016weight} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
+
 \section{Prerequisites}
 \subsection{Recurrent neural networks}
 
@@ -62,49 +76,22 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
 
 Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
-However these models can be hard to optimize due to vanishing/exploding gradients.
-To see this, consider the Jacobian of the last hidden state with respect to the first hidden state:
+A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
+This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
+However, unrolled recurrent networks differ from true feedforward networks in several important respects:
+\begin{itemize}
+\item The parameters are shared across layers.
+\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
+\item There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
+\item The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
+\end{itemize}
 
-\begin{align}
-\frac{d \vect{h}_T}
-     {d \vect{h}_0}
- =
-\frac{d \vect{h}_1}
-     {d \vect{h}_0}
-\frac{d \vect{h}_2}
-     {d \vect{h}_1}
-\cdots
-\frac{d \vect{h}_T}
-     {d \vect{h}_{T-1}}
- =
-\prod_{t = 1}^{T}
-\frac{d \vect{h}_t}
-     {d \vect{h}_{t-1}}
-\end{align}
+All of these complicate the application of batch normalization in recurrent neural networks.
+Nevertheless, we believe that batch normalization can help with some of the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients~\cite{somebody} and the difficulty of learning long-term dependencies~\cite{somebody else}.
 
-some of the eigenvalues of which either exponentially decay or diverge as $T \to \infty$ unless the sequence  of Jacobians
+There exist a number of variants of the basic recurrent neural network given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
 
-\begin{align}
-\frac{d \vect{h}_t}
-     {d \vect{h}_{t-1}}
- =
-\mat{W} \mathrm{diag}(f'(\vect{h_{t-1}}))
-\end{align}
-
-is well-behaved.
-
-Several approaches to this problem have been explored.
-
-reparameterizations:
-LSTM
-unitary RNN
-
-optimization algorithms:
-step clipping
-hessian-free
-yann ollivier
-
-We focus on LSTMs, with recurrent transition given by
+We will focus on LSTM, with recurrent transition given by
 
 \begin{align}
 \left(\begin{array}{ccc}
@@ -133,7 +120,7 @@ We focus on LSTMs, with recurrent transition given by
 where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and the initial states $\vect{c}_0, \vect{h}_0 \in \reals^{d_h}$ are model parameters.
 The $\ewprod$ operator denotes the elementwise product.
 
-Intuitively, LSTM improves on standard RNN in two ways.
+Intuitively, LSTM improves on the basic RNN in two ways.
 First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
 Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
 
@@ -162,21 +149,6 @@ Batch normalizing some hidden layer's activation ensures that its mean and varia
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
-However, applying batch normalization to recurrent neural networks has proven to be challenging.
-\cite{Baidu} use it in a stack of LSTMs, but normalize only the input terms and not the recurrent terms.
-\cite{Cesar} doesn't believe in it!
-My bro \cite{Tim Salimans} recently proposed a scheme to normalize weights that they show has a similar effect to batch normalization but might be easier to apply in the recurrent setting.
-
-A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
-However, such unrolled networks differ from true feedforward networks in several important respects:
-\begin{itemize}
-\item The parameters are shared across layers.
-\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
-\item There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-\item The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
-\end{itemize}
-
-All of these complicate the application of batch normalization in recurrent neural networks.
 
 \section{Batch-normalized LSTM}
 
