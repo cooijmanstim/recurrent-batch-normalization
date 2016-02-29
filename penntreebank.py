@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, util
 import logging
 from collections import OrderedDict
 import numpy as np
@@ -81,35 +81,44 @@ def bn(x, gammas, betas, args):
     if args.baseline:
         return x + betas
     mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-    # if only
     mean.tag.batchstat, var.tag.batchstat = True, True
     #var = T.maximum(var, args.epsilon)
     var = var + args.epsilon
     return theano.tensor.nnet.bn.batch_normalization(
         inputs=x, gamma=gammas, beta=betas,
-        mean=mean, std=T.sqrt(var))
+        mean=mean, std=T.sqrt(var)), mean, var
 
 def construct_rnn(args, nclasses, x, activation):
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
     Wx = theano.shared(orthogonal((nclasses, args.num_hidden)), name="Wx")
-    gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
-    betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
-    parameters = ([h0, Wh, Wx, gammas, betas])
+    x_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="x_gammas")
+    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
+    xh_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="xh_betas")
+    parameters = ([h0, Wh, Wx, x_gammas, h_gammas, xh_betas])
+
+    def stepfn(xtilde, dummy_h, dummy_htilde, h):
+        htilde = dummy_htilde + T.dot(h, Wh)
+        xtilde_normal, xtilde_mean, xtilde_var = bn(xtilde, x_gammas, xh_betas, args)
+        htilde_normal, htilde_mean, htilde_var = bn(htilde, h_gammas, 0, args)
+        h = dummy_h + activation(htilde_normal + xtilde_normal)
+        return locals()
 
     xtilde = T.dot(x, Wx)
     dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                         htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
-    def stepfn(xtilde, dummy_h, dummy_htilde, h):
-        htilde = dummy_htilde + T.dot(h, Wh) + xtilde
-        h = dummy_h + activation(bn(htilde, gammas, betas, args))
-        return h, htilde
-    [h, htilde], _ = theano.scan(
+    outputs, _ = util.scan(
         stepfn,
-        sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
-        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0),
-                      None])
-    return dict(h=h, htilde=htilde), dummy_states, parameters
+        sequences=dict(xtilde=xtilde,
+                       dummy_h=dummy_states["h"],
+                       dummy_htilde=dummy_states["htilde"]),
+        outputs_info=dict(h=T.repeat(h0[None, :], xtilde.shape[1], axis=0),
+                          htilde=None,
+                          htilde_mean=T.zeros((args.num_hidden,)),
+                          htilde_var =T.ones ((args.num_hidden,)),
+                          xtilde_mean=T.zeros((args.num_hidden,)),
+                          xtilde_var =T.ones ((args.num_hidden))))
+    return outputs, dummy_states, parameters
 
 def construct_lstm(args, nclasses, x, activation):
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
@@ -123,38 +132,41 @@ def construct_lstm(args, nclasses, x, activation):
     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
     ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
-    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
-    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
+    c_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="c_gammas")
+    c_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="c_betas")
 
     # forget gate bias initialization
     pffft = ab_betas.get_value()
     pffft[args.num_hidden:2*args.num_hidden] = 1.
     ab_betas.set_value(pffft)
 
-    parameters = [h0, c0, Wa, Wx, a_gammas, b_gammas, ab_betas, h_gammas, h_betas]
+    parameters = [h0, c0, Wa, Wx, a_gammas, b_gammas, ab_betas, c_gammas, c_betas]
 
-    xtilde = T.dot(x, Wx)
-    dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
-                        c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
     def stepfn(xtilde, dummy_h, dummy_c, h, c):
         atilde = T.dot(h, Wa)
         btilde = xtilde
-        a = bn(atilde, a_gammas, ab_betas, args)
-        b = bn(btilde, b_gammas, 0, args)
-        ab = a + b
+        a_normal, a_mean, a_var = bn(atilde, a_gammas, ab_betas, args)
+        b_normal, b_mean, b_var = bn(btilde, b_gammas, 0, args)
+        ab = a_normal + b_normal
         g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                       for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
         c = dummy_c + f * c + i * g
-        htilde = c
-        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas, args))
-        return h, c, atilde, btilde, htilde
-    [h, c, atilde, btilde, htilde], _ = theano.scan(
+        c_normal, c_mean, c_var = bn(c, c_gammas, c_betas, args)
+        h = dummy_h + o * activation(c_normal)
+        return locals()
+    xtilde = T.dot(x, Wx)
+    dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                        c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
+    outputs, _ = util.scan(
         stepfn,
-        sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0),
-                      T.repeat(c0[None, :], xtilde.shape[1], axis=0),
-                      None, None, None])
-    return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
+        sequences=dict(xtilde=xtilde,
+                       dummy_h=dummy_states["h"],
+                       dummy_c=dummy_states["c"]),
+        outputs_info=dict(h=T.repeat(h0[None, :], xtilde.shape[1], axis=0),
+                          c=T.repeat(c0[None, :], xtilde.shape[1], axis=0),
+                          atilde=None,
+                          btilde=None))
+    return outputs, dummy_states, parameters
 
 if __name__ == "__main__":
     sequence_length = 50
