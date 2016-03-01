@@ -414,18 +414,19 @@ if __name__ == "__main__":
         data_stream=None, after_epoch=True))
 
     # performance monitor
-    for which_set in "train valid test".split():
-        logger.warning("constructing %s monitor" % which_set)
-        channels = list(graphs["inference"].outputs)
-        extensions.append(DataStreamMonitoring(
-            channels,
-            prefix=which_set, after_epoch=True,
-            data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
-                                   num_examples=50000, length=args.length)))
+    for situation in "training inference".split():
+        for which_set in "train valid test".split():
+            logger.warning("constructing %s %s monitor" % (which_set, situation))
+            channels = list(graphs[situation].outputs)
+            extensions.append(DataStreamMonitoring(
+                channels,
+                prefix="%s_%s" % (which_set, situation), after_epoch=True,
+                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
+                                       num_examples=50000, length=args.length)))
 
     extensions.extend([
-        TrackTheBest("valid_error_rate", "best_valid_error_rate"),
-        DumpBest("best_valid_error_rate", "best.zip"),
+        TrackTheBest("valid_inference_error_rate", "best_valid_inference_error_rate"),
+        DumpBest("best_valid_inference_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
         #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=50),
         Checkpoint("checkpoint.zip", on_interrupt=False, every_n_epochs=1, use_cpickle=True),
