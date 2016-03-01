@@ -125,8 +125,8 @@ def bn(t, x, gammas, betas, mean, var, args):
 def repeatpad(popstat, length):
     return T.concatenate([
         popstat[:length],
-        T.repeat(popstat[-1],
-                 T.max(0, length - popstat.shape[0]),
+        T.repeat(popstat[-1:],
+                 T.maximum(0, length - popstat.shape[0]),
                  axis=0)
     ], axis=0)
 
@@ -218,11 +218,15 @@ class LSTM(object):
             h = dummy_h + o * self.activation(c_normal)
             return locals()
 
-        batch_size = x.shape[1]
-        dummy_states = dict(h=T.zeros((length, batch_size, args.num_hidden)),
-                            c=T.zeros((length, batch_size, args.num_hidden)))
+        # use `symlength` where we need to be able to adapt to longer sequences
+        # than the ones we trained on
+        symlength = x.shape[0]
 
-        sequences = dict(t=T.cast(T.arange(length), theano.config.floatX),
+        batch_size = x.shape[1]
+        dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
+                            c=T.zeros((symlength, batch_size, args.num_hidden)))
+
+        sequences = dict(t=T.cast(T.arange(symlength), theano.config.floatX),
                          x=x,
                          dummy_h=dummy_states["h"],
                          dummy_c=dummy_states["c"])
@@ -247,7 +251,12 @@ class LSTM(object):
                     if args.population_strategy == "repeat":
                         # use sequence of statistics as is, repeat last element if
                         # input sequence goes beyond
-                        sequences[name] = repeatpad(popstats[name], length)
+                        sequences[name] = theano.ifelse.ifelse(
+                            symlength > length,
+                            repeatpad(popstats[name], symlength),
+                            # repeatpad generalizes to this case, but crashes due to a theano bug
+                            # (https://github.com/Theano/Theano/issues/4149)
+                            popstats[name][:symlength])
                 else:
                     # provide outputs to allow the stepfn to estimate batch
                     # statistics as recurrent running average
