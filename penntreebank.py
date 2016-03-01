@@ -245,13 +245,6 @@ class LSTM(object):
                         # pass in as time-invariant variable
                         non_sequences[name] = yuck
                     if args.population_strategy == "repeat":
-                        # note: length must be fixed
-                        popstats[name] = theano.shared(
-                            init + np.zeros((length, size), dtype=theano.config.floatX),
-                            name=name)
-                        updates[popstats[name]] = (alpha * outputs[name] +
-                                                   (1 - alpha) * popstats[name])
-                    if args.population_strategy == "repeat":
                         # use sequence of statistics as is, repeat last element if
                         # input sequence goes beyond
                         sequences[name] = repeatpad(popstats[name], length)
