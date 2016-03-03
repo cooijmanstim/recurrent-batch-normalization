@@ -56,14 +56,18 @@ class PTB(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
-    def __init__(self, which_set, length):
+    def __init__(self, which_set, length, overlapping=True):
         self.length = length
+        self.overlapping = overlapping
         path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
         data = np.load(path)
         self.vocab = data["vocab"]
         self.data = data[which_set]
-        # nonoverlapping examples, drop last ragged sequence
-        self.num_examples = int(len(self.data) / self.length)
+        if self.overlapping:
+            self.num_examples = len(self.data) - self.length + 1
+        else:
+            # drops last ragged batch
+            self.num_examples = int(len(self.data) / self.length)
         super(PTB, self).__init__()
 
     def get_data(self, state=None, request=None):
@@ -71,7 +75,9 @@ class PTB(fuel.datasets.Dataset):
             request = list(range(request.start, request.stop, request.step))
         batch = np.zeros((len(request), self.length, len(self.vocab)), dtype=theano.config.floatX)
         for i, start in enumerate(request):
-            offset = start*self.length
+            offset = start
+            if not self.overlapping:
+                offset *= self.length
             # one-hot
             batch[i, list(range(self.length)), self.data[offset:offset + self.length]] = 1.
         if False:
@@ -79,11 +85,8 @@ class PTB(fuel.datasets.Dataset):
             assert np.allclose(batch.sum(axis=2), 1)
         return (batch,)
 
-def get_dataset(which_set, length):
-    return PTB(which_set=which_set, length=length)
-
-def get_stream(which_set, batch_size, length, num_examples=None):
-    dataset = get_dataset(which_set, length=length)
+def get_stream(which_set, batch_size, length, num_examples=None, overlapping=True):
+    dataset = PTB(which_set, length=length, overlapping=overlapping)
     if num_examples is None or num_examples > dataset.num_examples:
         num_examples = dataset.num_examples
     stream = fuel.streams.DataStream.default_stream(
