@@ -175,11 +175,10 @@ class LSTM(object):
                      for stat in (a_mean, b_mean, c_mean,
                                   a_var,  b_var,  c_var)]
 
-            atilde = T.dot(h, p.Wa)
-            btilde = T.dot(x, p.Wx)
-            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, p.ab_betas, a_mean, a_var, args)
-            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0,          b_mean, b_var, args)
-            ab = a_normal + b_normal
+            atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
+            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, 0, a_mean, a_var, args)
+            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0, b_mean, b_var, args)
+            ab = a_normal + b_normal + p.ab_betas
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
@@ -322,8 +321,6 @@ if __name__ == "__main__":
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
-    parser.add_argument("--population-strategy", choices="average repeat".split(), default="average")
-    parser.add_argument("--average-batch-statistics", action="store_true")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
