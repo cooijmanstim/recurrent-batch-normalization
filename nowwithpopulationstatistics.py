@@ -1,129 +1,68 @@
 import sys
-# python i hate you
-sys.path.insert(0, "/u/cooijmat/dev/wiprepos/Theano")
-sys.path.append("/u/cooijmat/dev/wiprepos/Theano")
-import theano, itertools, pprint, copy, numpy as np, theano.tensor as T
+import theano, itertools, pprint, copy, numpy as np, theano.tensor as T, re
 from collections import OrderedDict
-from theano.gof.op import ops_with_inner_function
-from theano.scan_module.scan_op import Scan
-from theano.scan_module.scan_utils import scan_args
 from blocks.serialization import load
+import util
 
-def equizip(*sequences):
-    sequences = list(map(list, sequences))
-    assert all(len(sequence) == len(sequences[0]) for sequence in sequences[1:])
-    return zip(*sequences)
+from penntreebank import PTB, get_stream
 
-# get outer versions of the given inner variables of a scan node
-def export(node, extra_inner_outputs):
-    assert isinstance(node.op, Scan)
+main_loop = load(sys.argv[1])
 
-    old_inner_inputs = node.op.inputs
-    old_inner_outputs = node.op.outputs
-    old_outer_inputs = node.inputs
+# extract population statistic updates
+updates = [update for update in main_loop.algorithm.updates
+           # FRAGILE
+           if re.search("_(mean|var)$", update[0].name)]
+print updates
 
-    new_inner_inputs = list(old_inner_inputs)
-    new_inner_outputs = list(old_inner_outputs)
-    new_outer_inputs = list(old_outer_inputs)
-    new_info = copy.deepcopy(node.op.info)
+# -_-
+nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
 
-    # put the new inner outputs in the right place in the output list and
-    # update info
-    new_info["n_nit_sot"] += len(extra_inner_outputs)
-    yuck = len(old_inner_outputs) - new_info["n_shared_outs"]
-    new_inner_outputs[yuck:yuck] = extra_inner_outputs
+old_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
-    # scan() adds an outer input for each nitsot. we need to do this too.
-    # luckily it's the same input for each of them, so we can use a reference
-    # to the ones already there.
-    # if there was no nitsot in the old op we're shit out of luck
-    assert node.op.n_nit_sot
-    # logic taken from Scan.outer_nitsot
-    offset = (1 + node.op.n_seqs + node.op.n_mit_mot + node.op.n_mit_sot +
-              node.op.n_sit_sot + node.op.n_shared_outs)
-    # take the first outer nitsot input and repeat it
-    new_outer_inputs[offset:offset] = [new_outer_inputs[offset]] * len(extra_inner_outputs)
+# destructure moving average expression to construct a new expression
+new_updates = []
+for popstat, value in updates:
+    # FRAGILE
+    assert value.owner.op.scalar_op == theano.scalar.add
+    terms = value.owner.inputs
+    # right multiplicand is hostfromgpu(popstat)
+    assert terms[1].owner.inputs[1].owner.inputs[0] == popstat
+    batchstat = terms[0].owner.inputs[1]
 
-    new_op = Scan(new_inner_inputs, new_inner_outputs, new_info)
-    outer_outputs = new_op(*new_outer_inputs)
+    old_popstats[popstat] = popstat.get_value()
 
-    # grab the outputs we actually care about
-    extra_outer_outputs = outer_outputs[yuck:yuck + len(extra_inner_outputs)]
-    return extra_outer_outputs
+    # FRAGILE: assume population statistics not used in computation of batch statistics
+    # otherwise popstat should always have a reasonable value
+    popstat.set_value(0 * popstat.get_value(borrow=True))
+    new_updates.append((popstat, popstat + batchstat / float(nbatches)))
 
-def gather_symbatchstats_and_estimators(outputs):
-    symbatchstats = []
-    estimators = []
+# FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
+estimate_fn = theano.function(main_loop.algorithm.inputs, [],
+                              updates=new_updates, on_unused_input="warn")
+for batch in main_loop.data_stream.get_epoch_iterator(as_dict=True):
+    estimate_fn(**batch)
 
-    for var in theano.gof.graph.ancestors(outputs):
-        if hasattr(var.tag, "batchstat"):
-            symbatchstats.append(var)
-            estimators.append(var)
+new_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
-        # descend into Scan/OpFromGraph
-        try:
-            op = var.owner.op
-        except:
-            continue
-        if op.__class__ in ops_with_inner_function:
-            print "descending into", var
+from blocks.monitoring.evaluators import DatasetEvaluator
+results = dict()
+for situation in "training inference".split():
+    results[situation] = dict()
+    outputs, = [
+        extension._evaluator.theano_variables
+        for extension in main_loop.extensions
+        if getattr(extension, "prefix", None) == "valid_%s" % situation]
+    evaluator = DatasetEvaluator(outputs)
+    for which_set in "train valid test".split():
+        results[situation][which_set] = OrderedDict(
+            (length, evaluator.evaluate(get_stream(
+                which_set=which_set,
+                batch_size=1000,
+                length=length)))
+            for length in [50, 100, 200, 300, 400, 500])
 
-            inner_estimators, inner_symbatchstats = gather_symbatchstats_and_estimators(op.outputs)
-            outer_estimators = export(var.owner, inner_estimators)
-
-            # take mean of each of outer_outputs along axis 0 to
-            # average the estimate across the sequence
-            outer_estimators = [x.mean(axis=0) for x in outer_estimators]
-
-            symbatchstats.extend(inner_symbatchstats)
-            estimators.extend(outer_estimators)
-
-    return symbatchstats, estimators
-
-def get_population_outputs(inputs, batch_outputs, estimation_batches):
-    symbatchstats, estimators = gather_symbatchstats_and_estimators(batch_outputs)
-    print "symbatchstats x estimators", zip(symbatchstats, estimators)
-
-    assert symbatchstats
-
-    # take average of batch statistics over training set
-    estimator_fn = theano.function(inputs, estimators, on_unused_input="warn")
-    popstats_by_symbatchstat = {}
-    for i, batch in enumerate(estimation_batches):
-        estimates = estimator_fn(**batch)
-        for symbatchstat, estimator, estimate in equizip(symbatchstats, estimators, estimates):
-            if symbatchstat not in popstats_by_symbatchstat:
-                popstats_by_symbatchstat[symbatchstat] = np.zeros_like(estimate)
-            popstats_by_symbatchstat[symbatchstat] *= i / float(i + 1)
-            popstats_by_symbatchstat[symbatchstat] += 1 / float(i + 1) * estimate
-
-    population_replacements = [
-        (symbatchstat,
-         # need as_tensor_variable to make sure it's not a CudaNdarray
-         # because then the replacement will fail as symbatchstat has not
-         # been moved to the gpu yet.
-         T.as_tensor_variable(
-             T.patternbroadcast(theano.shared(popstat),
-                                symbatchstat.broadcastable))
-         .copy(name="popstat_%s" % symbatchstat.name))
-        for symbatchstat, popstat in popstats_by_symbatchstat.items()]
-    print "population replacements", population_replacements
-
-    if False:
-        # clone doesn't replace inside scan
-        from theano.scan_module.scan_utils import clone
-        population_outputs = clone(batch_outputs, replace=population_replacements)
-    else:
-        from theano.scan_module.scan_utils import map_variables
-        # work around cloning
-        aargh = {}
-        for k, v in population_replacements:
-            k.tag.original_id = id(k)
-            aargh[k.tag.original_id] = v
-        population_outputs = map_variables(
-            lambda var: (aargh[var.tag.original_id]
-                         if hasattr(var.tag, "original_id")
-                         else var),
-            batch_outputs)
-
-    return population_outputs
+import cPickle
+cPickle.dump(dict(results=results,
+                  old_popstats=old_popstats,
+                  new_popstats=new_popstats),
+             open(sys.argv[1] + "_popstat_results.pkl", "w"))
