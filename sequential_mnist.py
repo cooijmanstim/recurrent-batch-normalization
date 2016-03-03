@@ -316,7 +316,7 @@ if __name__ == "__main__":
                                                              batch_size=batch_size,
                                                              num_examples=batch_size)
                                                   .get_epoch_iterator(as_dict=True)),
-                                       before_training=True, every_n_epochs=10)
+                                       before_epoch=True)
 
     extensions.extend([
         hiddenthingsdumper,

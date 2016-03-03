@@ -299,17 +299,20 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
 
     state_grads = dict((k, T.grad(cost, v))
                        for k, v in dummy_states.items())
-    extensions = [
-        DumpVariables("%s_hiddens" % situation, graph.inputs,
-                      [v.copy(name="%s%s" % (k, suffix))
-                       for suffix, things in [("", outputs), ("_grad", state_grads)]
-                       for k, v in things.items()],
-                      batch=next(get_stream(which_set="train",
-                                            batch_size=args.batch_size,
-                                            num_examples=args.batch_size,
-                                            length=args.length)
-                                 .get_epoch_iterator(as_dict=True)),
-                      before_training=True, every_n_epochs=10)]
+    extensions = []
+    if False:
+        # all these graphs be taking too much gpu memory?
+        extensions.append(
+            DumpVariables("%s_hiddens" % situation, graph.inputs,
+                          [v.copy(name="%s%s" % (k, suffix))
+                           for suffix, things in [("", outputs), ("_grad", state_grads)]
+                           for k, v in things.items()],
+                          batch=next(get_stream(which_set="train",
+                                                batch_size=args.batch_size,
+                                                num_examples=args.batch_size,
+                                                length=args.length)
+                                     .get_epoch_iterator(as_dict=True)),
+                          before_training=True, every_n_epochs=10))
 
     return graph, extensions
 
