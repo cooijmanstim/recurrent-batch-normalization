@@ -7,6 +7,7 @@ import util
 from penntreebank import PTB, get_stream
 
 main_loop = load(sys.argv[1])
+print main_loop.log.current_row
 
 # extract population statistic updates
 updates = [update for update in main_loop.algorithm.updates
@@ -14,33 +15,35 @@ updates = [update for update in main_loop.algorithm.updates
            if re.search("_(mean|var)$", update[0].name)]
 print updates
 
-# -_-
-nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
-
 old_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
-# destructure moving average expression to construct a new expression
-new_updates = []
-for popstat, value in updates:
-    # FRAGILE
-    assert value.owner.op.scalar_op == theano.scalar.add
-    terms = value.owner.inputs
-    # right multiplicand is hostfromgpu(popstat)
-    assert terms[1].owner.inputs[1].owner.inputs[0] == popstat
-    batchstat = terms[0].owner.inputs[1]
+# baseline doesn't need all this
+if updates:
+    # -_-
+    nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
 
-    old_popstats[popstat] = popstat.get_value()
+    # destructure moving average expression to construct a new expression
+    new_updates = []
+    for popstat, value in updates:
+        # FRAGILE
+        assert value.owner.op.scalar_op == theano.scalar.add
+        terms = value.owner.inputs
+        # right multiplicand is hostfromgpu(popstat)
+        assert terms[1].owner.inputs[1].owner.inputs[0] == popstat
+        batchstat = terms[0].owner.inputs[1]
 
-    # FRAGILE: assume population statistics not used in computation of batch statistics
-    # otherwise popstat should always have a reasonable value
-    popstat.set_value(0 * popstat.get_value(borrow=True))
-    new_updates.append((popstat, popstat + batchstat / float(nbatches)))
+        old_popstats[popstat] = popstat.get_value()
 
-# FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
-estimate_fn = theano.function(main_loop.algorithm.inputs, [],
-                              updates=new_updates, on_unused_input="warn")
-for batch in main_loop.data_stream.get_epoch_iterator(as_dict=True):
-    estimate_fn(**batch)
+        # FRAGILE: assume population statistics not used in computation of batch statistics
+        # otherwise popstat should always have a reasonable value
+        popstat.set_value(0 * popstat.get_value(borrow=True))
+        new_updates.append((popstat, popstat + batchstat / float(nbatches)))
+
+    # FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
+    estimate_fn = theano.function(main_loop.algorithm.inputs, [],
+                                  updates=new_updates, on_unused_input="warn")
+    for batch in main_loop.data_stream.get_epoch_iterator(as_dict=True):
+        estimate_fn(**batch)
 
 new_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
@@ -60,6 +63,12 @@ for situation in "training inference".split():
                 batch_size=1000,
                 length=length)))
             for length in [50, 100, 200, 300, 400, 500])
+
+results["proper_test"] = evaluator.evaluate(
+    get_stream(
+        which_set="test",
+        batch_size=1,
+        length=446184))
 
 import cPickle
 cPickle.dump(dict(results=results,
