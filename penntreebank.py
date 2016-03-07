@@ -56,7 +56,7 @@ class PTB(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
-    def __init__(self, which_set, length, overlapping=True):
+    def __init__(self, which_set, length, overlapping=False):
         self.length = length
         self.overlapping = overlapping
         path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
@@ -85,7 +85,7 @@ class PTB(fuel.datasets.Dataset):
             assert np.allclose(batch.sum(axis=2), 1)
         return (batch,)
 
-def get_stream(which_set, batch_size, length, num_examples=None, overlapping=True):
+def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
     dataset = PTB(which_set, length=length, overlapping=overlapping)
     if num_examples is None or num_examples > dataset.num_examples:
         num_examples = dataset.num_examples
@@ -99,15 +99,15 @@ activations = dict(
     identity=lambda x: x,
     relu=lambda x: T.max(0, x))
 
-def bn(x, gammas, betas, mean, var, args):
+def bn(x, gammas, betas, args, mean=None, var=None):
     if args.baseline:
-        return x + betas
-    assert mean.ndim == 1
-    assert var.ndim == 1
+        return x + betas, mean, var
     assert x.ndim == 2
     if not args.use_population_statistics:
         mean = x.mean(axis=0)
         var = x.var(axis=0)
+    assert mean.ndim == 1
+    assert var.ndim == 1
     #var = T.maximum(var, args.epsilon)
     var = var + args.epsilon
     y = theano.tensor.nnet.bn.batch_normalization(
@@ -131,13 +131,17 @@ class LSTM(object):
         if not hasattr(self, "parameters"):
             # dicts suck
             self.parameters = Pain()
+            if args.initialization == "identity":
+                Wa = np.concatenate([
+                    np.eye(args.num_hidden),
+                    orthogonal((args.num_hidden, 3 * args.num_hidden)),
+                ], axis=1)
+            elif args.initialization == "orthogonal":
+                Wa = orthogonal((args.num_hidden, 4 * args.num_hidden))
             for parameter in [
                     theano.shared(zeros((args.num_hidden,)), name="h0"),
                     theano.shared(zeros((args.num_hidden,)), name="c0"),
-                    theano.shared(np.concatenate([
-                        np.eye(args.num_hidden),
-                        orthogonal((args.num_hidden, 3 * args.num_hidden)),
-                    ], axis=1).astype(theano.config.floatX), name="Wa"),
+                    theano.shared(Wa.astype(theano.config.floatX), name="Wa"),
                     theano.shared(orthogonal((self.nclasses, 4 * args.num_hidden)), name="Wx"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
@@ -161,36 +165,42 @@ class LSTM(object):
         # use `symlength` where we need to be able to adapt to longer sequences
         # than the ones we trained on
         symlength = x.shape[0]
+        t = T.cast(T.arange(symlength), "int16")
+        long_sequence_is_long = T.ge(T.cast(T.arange(symlength), theano.config.floatX), length)
         batch_size = x.shape[1]
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
 
-        def stepfn(t, x, dummy_h, dummy_c, h, c,
-                   a_mean, b_mean, c_mean,
-                   a_var, b_var, c_var):
-            if args.use_population_statistics:
-                # pluck the appropriate population statistic for this
-                # time step out of the sequence, or take the last
-                # element if we've gone beyond the training length
-                (a_mean, b_mean, c_mean,
-                 a_var,  b_var,  c_var) = [
-                     stat[T.minimum(t, symlength - 1)]
-                     for stat in (a_mean, b_mean, c_mean,
-                                  a_var,  b_var,  c_var)]
+        def stepfn(t, long_sequence_is_long, x, dummy_h, dummy_c, h, c, **popstats):
+            popstats_by_key = dict()
+            for key in "abc":
+                popstats_by_key[key] = dict()
+                for stat in "mean var".split():
+                    if not args.baseline and args.use_population_statistics:
+                        popstat = popstats["%s_%s" % (key, stat)]
+                        # pluck the appropriate population statistic for this
+                        # time step out of the sequence, or take the last
+                        # element if we've gone beyond the training length.
+                        # if `long_sequence_is_long` then `t` may be unreliable
+                        # as it will overflow for looong sequences.
+                        popstat = theano.ifelse.ifelse(
+                            long_sequence_is_long, popstat[-1], popstat[t])
+                    else:
+                        popstat = None
+                    popstats_by_key[key][stat] = popstat
 
             atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
-            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, 0, a_mean, a_var, args)
-            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0, b_mean, b_var, args)
+            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, 0, args, **popstats_by_key["a"])
+            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0, args, **popstats_by_key["b"])
             ab = a_normal + b_normal + p.ab_betas
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
-            c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, c_mean, c_var, args)
+            c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, args, **popstats_by_key["c"])
             h = dummy_h + o * self.activation(c_normal)
             return locals()
 
-        sequences = dict(t=T.cast(T.arange(symlength), theano.config.floatX),
-                         x=x,
+        sequences = dict(t=t, x=x, long_sequence_is_long=long_sequence_is_long,
                          dummy_h=dummy_states["h"],
                          dummy_c=dummy_states["c"])
         outputs_info = dict(h=T.repeat(p.h0[None, :], batch_size, axis=0),
@@ -198,20 +208,21 @@ class LSTM(object):
                             atilde=None, btilde=None)
         non_sequences = dict()
 
-        for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-            for stat, init in zip("mean var".split(), [0, 1]):
-                name = "%s_%s" % (key, stat)
+        if not args.baseline:
+            for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
+                for stat, init in zip("mean var".split(), [0, 1]):
+                    name = "%s_%s" % (key, stat)
 
-                if args.use_population_statistics:
-                    # population statistics is a sequence, but we pass it in
-                    # as a non-sequence and index it ourselves. this allows us
-                    # to generalize to longer sequences, in which case we
-                    # repeat the last element.
-                    non_sequences[name] = popstats[name]
-                else:
-                    # provide batch statistic as an output so that we
-                    # can estimate population statistics from them.
-                    outputs_info[name] = None
+                    if args.use_population_statistics:
+                        # population statistics is a sequence, but we pass it in
+                        # as a non-sequence and index it ourselves. this allows us
+                        # to generalize to longer sequences, in which case we
+                        # repeat the last element.
+                        non_sequences[name] = popstats[name]
+                    else:
+                        # provide batch statistic as an output so that we
+                        # can estimate population statistics from them.
+                        outputs_info[name] = None
 
         outputs, updates = util.scan(
             stepfn,
@@ -219,20 +230,21 @@ class LSTM(object):
             outputs_info=outputs_info,
             non_sequences=non_sequences)
 
-        if not args.use_population_statistics:
-            # prepare population statistic estimation
-            popstats = dict()
-            alpha = 1e-2
-            for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-                for stat, init in zip("mean var".split(), [0, 1]):
-                    name = "%s_%s" % (key, stat)
-                    popstats[name] = theano.shared(
-                        init + np.zeros((length, size,),
-                                        dtype=theano.config.floatX),
-                        name=name)
-                    popstats[name].tag.estimand = outputs[name]
-                    updates[popstats[name]] = (alpha * outputs[name] +
-                                               (1 - alpha) * popstats[name])
+        if not args.baseline:
+            if not args.use_population_statistics:
+                # prepare population statistic estimation
+                popstats = dict()
+                alpha = 0.005
+                for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
+                    for stat, init in zip("mean var".split(), [0, 1]):
+                        name = "%s_%s" % (key, stat)
+                        popstats[name] = theano.shared(
+                            init + np.zeros((length, size,),
+                                            dtype=theano.config.floatX),
+                            name=name)
+                        popstats[name].tag.estimand = outputs[name]
+                        updates[popstats[name]] = (alpha * outputs[name] +
+                                                   (1 - alpha) * popstats[name])
 
         return outputs, updates, dummy_states, popstats
 
@@ -320,6 +332,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
+    parser.add_argument("--initialization", choices="identity orthogonal".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
@@ -381,8 +394,8 @@ if __name__ == "__main__":
                                        num_examples=50000, length=args.length)))
 
     extensions.extend([
-        TrackTheBest("valid_inference_error_rate", "best_valid_inference_error_rate"),
-        DumpBest("best_valid_inference_error_rate", "best.zip"),
+        TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
+        DumpBest("best_valid_training_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
         #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=50),
         Checkpoint("checkpoint.zip", on_interrupt=False, every_n_epochs=1, use_cpickle=True),
