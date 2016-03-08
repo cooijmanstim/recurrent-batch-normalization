@@ -202,19 +202,11 @@ def get_stream(which_set, batch_size, num_examples=None):
 #                       None, None, None])
 #     return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
 
-def bn(t, x, gammas, betas, mean, var, args):
+def bn(x, gammas, betas, mean, var, args):
     assert mean.ndim == 1
     assert var.ndim == 1
     assert x.ndim == 2
-    if args.use_population_statistics:
-        pass
-    elif args.average_batch_statistics:
-        # running average
-        mean *= t / (t + 1)
-        mean += 1 / (t + 1) * x.mean(axis=0)
-        var *= t / (t + 1)
-        var += 1 / (t + 1) * x.var(axis=0)
-    else:
+    if not args.use_population_statistics:
         mean = x.mean(axis=0)
         var = x.var(axis=0)
     #var = T.maximum(var, args.epsilon)
@@ -225,18 +217,11 @@ def bn(t, x, gammas, betas, mean, var, args):
     else:
         y = theano.tensor.nnet.bn.batch_normalization(
             inputs=x, gamma=gammas, beta=betas,
-            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var)))
+            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var)),
+            mode="high_mem")
     assert mean.ndim == 1
     assert var.ndim == 1
     return y, mean, var
-
-def repeatpad(popstat, length):
-    return T.concatenate([
-        popstat[:length],
-        T.repeat(popstat[-1:],
-                 T.maximum(0, length - popstat.shape[0]),
-                 axis=0)
-    ], axis=0)
 
 activations = dict(
     tanh=T.tanh,
@@ -261,7 +246,7 @@ class LSTM(object):
                 theano.shared(np.concatenate([np.eye(args.num_hidden),
                                               orthogonal((args.num_hidden, 3 * args.num_hidden)),],
                                              axis=1).astype(theano.config.floatX), name="Wa"),
-                theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx"),\
+                theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx"),
                 theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
                 theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
                 theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas"),
@@ -282,29 +267,30 @@ class LSTM(object):
     def construct_graph(self, args, x, length, popstats=None):
         p = self.allocate_parameters(args)
 
-        def stepfn(t, x, dummy_h, dummy_c, h, c,
+        def stepfn(x, dummy_h, dummy_c, h, c,
                    a_mean, b_mean, c_mean,
                    a_var, b_var, c_var):
 
             atilde = T.dot(h, p.Wa)
-            btilde = T.dot(x, p.Wx)
-            a_normal, a_mean, a_var = bn(t, atilde, p.a_gammas, p.ab_betas, a_mean, a_var, args)
-            b_normal, b_mean, b_var = bn(t, btilde, p.b_gammas, 0,          b_mean, b_var, args)
+            btilde = x
+            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, p.ab_betas, a_mean, a_var, args)
+            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0,          b_mean, b_var, args)
             ab = a_normal + b_normal
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
-            c_normal, c_mean, c_var = bn(t, c, p.c_gammas, p.c_betas, c_mean, c_var, args)
+            c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, c_mean, c_var, args)
             h = dummy_h + o * self.activation(c_normal)
             return locals()
+
 
         symlength = x.shape[0]
         batch_size = x.shape[1]
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
 
-        sequences = dict(t=T.cast(T.arange(symlength), theano.config.floatX),
-                         x=x,
+        xtilde = T.dot(x, p.Wx)
+        sequences = dict(x=xtilde,
                          dummy_h=dummy_states["h"],
                          dummy_c=dummy_states["c"])
         outputs_info = dict(h=T.repeat(p.h0[None, :], batch_size, axis=0),
@@ -315,19 +301,9 @@ class LSTM(object):
         for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
             for stat, init in zip("mean var".split(), [0, 1]):
                 name = "%s_%s" % (key, stat)
-
                 if popstats:
-                    if args.population_strategy == "average":
-                        if args.average_batch_statistics:
-                            # already averaged along the way; take last batch statistic
-                            avg = popstats[name][-1]
-                        else:
-                            avg = popstats[name].mean(axis=0)
-                        # pass in as time-invariant variable
-                        non_sequences[name] = avg
-                    if args.population_strategy == "repeat":
-                        ### All sequence are fixed size for sequential mnist
-                        sequences[name] =  popstats[name][:symlength]
+                    ### All sequence are fixed size for sequential mnist
+                    sequences[name] =  popstats[name][:symlength]
                 else:
                     # provide outputs to allow the stepfn to estimate batch
                     # statistics as recurrent running average
@@ -350,8 +326,9 @@ class LSTM(object):
                         init + np.zeros((length, size,), dtype=theano.config.floatX),
                         name=name)
                     popstats[name].tag.estimand = outputs[name]
-                    updates[popstats[name]] = (alpha * outputs[name] +
-                                               (1 - alpha) * popstats[name])
+                    ## FIXME we don't need to estimate the popstat here
+                    #updates[popstats[name]] = (alpha * outputs[name] +
+                    #                           (1 - alpha) * popstats[name])
 
             return outputs, updates, dummy_states, popstats
 
@@ -389,6 +366,9 @@ def construct_graphs(args, nclasses, length):
 
     Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
+    add_role(Wy, PARAMETER)
+    add_role(by, PARAMETER)
+
 
     ### graph construction
     inputs = dict(features=T.tensor4("features"), targets=T.imatrix("targets"))
@@ -438,12 +418,10 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=100)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initial-gamma", type=float, default=0.25)
+    parser.add_argument("--initial-gamma", type=float, default=0.1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
-    parser.add_argument("--population-strategy", choices="average repeat".split(), default="average")
-    parser.add_argument("--average-batch-statistics", action="store_true")
     parser.add_argument("--continue-from")
     parser.add_argument("--permuted", action="store_true")
     args = parser.parse_args()
@@ -466,6 +444,8 @@ if __name__ == "__main__":
         #Momentum(learning_rate=args.learning_rate, momentum=0.9),
         RMSProp(learning_rate=args.learning_rate, decay_rate=0.9),
     ])
+
+    import pdb; pdb.set_trace()
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
                                 parameters=graphs["training"].parameters,
                                 step_rule=step_rule)
@@ -499,10 +479,10 @@ if __name__ == "__main__":
             extensions.append(DataStreamMonitoring(
                 channels,
                 prefix="%s_%s" % (which_set, situation), after_epoch=True,
-                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size)))
+                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size))) #, num_examples=1000)))
 
     extensions.extend([
-        #TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
+        TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
         DumpBest("best_valid_traing_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
         #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=50),
