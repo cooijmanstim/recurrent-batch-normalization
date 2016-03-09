@@ -48,4 +48,15 @@ for instance in instances:
 
 import pdb; pdb.set_trace()
 plt.show()
+
+if False:
+    for instance in instances:
+        for variable, value in instance["new_popstats"].items():
+            plt.figure()
+            plt.imshow(value, cmap="bone", aspect="auto")
+            plt.colorbar()
+            plt.title("%s %s" % (instance["name"], variable.name))
+        import pdb; pdb.set_trace()
+        plt.show()
+
 import pdb; pdb.set_trace()
