@@ -387,7 +387,7 @@ if __name__ == "__main__":
         data_stream=None, after_epoch=True))
 
     # performance monitor
-    for situation in "training inference".split():
+    for situation in "training".split(): #"training inference".split():
         for which_set in "train valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)
