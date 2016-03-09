@@ -337,6 +337,7 @@ if __name__ == "__main__":
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
+    parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
@@ -352,10 +353,13 @@ if __name__ == "__main__":
     graphs, extensions, updates = construct_graphs(args, nclasses)
 
     ### optimization algorithm definition
+    if args.optimizer == "rmsprop":
+        optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
+    elif args.optimizer == "sgdmomentum":
+        optimizer = Momentum(learning_rate=args.learning_rate, momentum=0.99)
     step_rule = CompositeRule([
         StepClipping(1.),
-        #Momentum(learning_rate=args.learning_rate, momentum=0.9),
-        RMSProp(learning_rate=args.learning_rate, decay_rate=0.9),
+        optimizer,
     ])
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
                                 parameters=graphs["training"].parameters,
