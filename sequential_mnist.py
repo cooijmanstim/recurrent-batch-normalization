@@ -122,85 +122,85 @@ def get_stream(which_set, batch_size, num_examples=None):
 
 #     return dict(h=h, htilde=htilde), dummy_states, parameters
 
-# def construct_lstm(args, x, activation):
-#     parameters = []
+def construct_lstm(args, x, activation):
+    parameters = []
 
-#     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
-#     c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
-#     Wa = theano.shared(np.concatenate([
-#         np.eye(args.num_hidden),
-#         orthogonal((args.num_hidden, 3 * args.num_hidden)),
-#     ], axis=1).astype(theano.config.floatX), name="Wa")
+    h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
+    c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
+    Wa = theano.shared(np.concatenate([
+        np.eye(args.num_hidden),
+        orthogonal((args.num_hidden, 3 * args.num_hidden)),
+    ], axis=1).astype(theano.config.floatX), name="Wa")
 
-#     #Wa = theano.shared(np.concatenate([
-#     #    orthogonal((args.num_hidden, args.num_hidden)),
-#     #    orthogonal((args.num_hidden, 3 * args.num_hidden)),
-#     #], axis=1).astype(theano.config.floatX), name="Wa")
-#     Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
+    #Wa = theano.shared(np.concatenate([
+    #    orthogonal((args.num_hidden, args.num_hidden)),
+    #    orthogonal((args.num_hidden, 3 * args.num_hidden)),
+    #], axis=1).astype(theano.config.floatX), name="Wa")
+    Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
 
-#     parameters.extend([h0, c0, Wa, Wx])
+    parameters.extend([h0, c0, Wa, Wx])
 
-#     a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
-#     b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
-#     ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
-#     h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
-#     h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
+    a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
+    b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
+    ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
+    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
+    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
 
-#     # forget gate bias initialization
-#     pffft = ab_betas.get_value()
-#     pffft[args.num_hidden:2*args.num_hidden] = 1.
-#     ab_betas.set_value(pffft)
+    # forget gate bias initialization
+    pffft = ab_betas.get_value()
+    pffft[args.num_hidden:2*args.num_hidden] = 1.
+    ab_betas.set_value(pffft)
 
-#     if args.baseline:
-#         parameters.extend([ab_betas, h_betas])
-#         def bn(x, gammas, betas):
-#             return x + betas
-#     else:
-#         parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
-#         def bn(x, gammas, betas):
-#             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-#             # if only
-#             mean.tag.batchstat, var.tag.batchstat = True, True
-#             #var = T.maximum(var, args.epsilon)
-#             var = var + args.epsilon
-#             return (x - mean) / T.sqrt(var) * gammas + betas
+    if args.baseline:
+        parameters.extend([ab_betas, h_betas])
+        def bn(x, gammas, betas):
+            return x + betas
+    else:
+        parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
+        def bn(x, gammas, betas):
+            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+            # if only
+            mean.tag.batchstat, var.tag.batchstat = True, True
+            #var = T.maximum(var, args.epsilon)
+            var = var + args.epsilon
+            return (x - mean) / T.sqrt(var) * gammas + betas
 
-#     xtilde = T.dot(x, Wx)
+    xtilde = T.dot(x, Wx)
 
-#     if args.noise:
-#         # prime h with white noise
-#         Trng = MRG_RandomStreams()
-#         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-#     elif args.summarize:
-#         # prime h with mean of example
-#         h_prime = x.mean(axis=[0, 2])[:, None]
-#     else:
-#         h_prime = 0
+    if args.noise:
+        # prime h with white noise
+        Trng = MRG_RandomStreams()
+        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
+    elif args.summarize:
+        # prime h with mean of example
+        h_prime = x.mean(axis=[0, 2])[:, None]
+    else:
+        h_prime = 0
 
-#     dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
-#                         c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
+    dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                        c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
 
-#     def stepfn(xtilde, dummy_h, dummy_c, h, c):
-#         atilde = T.dot(h, Wa)
-#         btilde = xtilde
-#         a = bn(atilde, a_gammas, ab_betas)
-#         b = bn(btilde, b_gammas, 0)
-#         #b = btilde
-#         ab = a + b
-#         g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
-#                       for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
-#         c = dummy_c + f * c + i * g
-#         htilde = c
-#         h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas))
-#         return h, c, atilde, btilde, htilde
+    def stepfn(xtilde, dummy_h, dummy_c, h, c):
+        atilde = T.dot(h, Wa)
+        btilde = xtilde
+        a = bn(atilde, a_gammas, ab_betas)
+        b = bn(btilde, b_gammas, 0)
+        #b = btilde
+        ab = a + b
+        g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
+                      for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
+        c = dummy_c + f * c + i * g
+        htilde = c
+        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas))
+        return h, c, atilde, btilde, htilde
 
-#     [h, c, atilde, btilde, htilde], _ = theano.scan(
-#         stepfn,
-#         sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-#         outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
-#                       T.repeat(c0[None, :], xtilde.shape[1], axis=0),
-#                       None, None, None])
-#     return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
+    [h, c, atilde, btilde, htilde], _ = theano.scan(
+        stepfn,
+        sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
+        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+                      T.repeat(c0[None, :], xtilde.shape[1], axis=0),
+                      None, None, None])
+    return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
 
 def bn(x, gammas, betas, mean, var, args):
     assert mean.ndim == 1
@@ -215,6 +215,7 @@ def bn(x, gammas, betas, mean, var, args):
     if args.baseline:
         y = x + betas
     else:
+        import pdb; pdb.set_trace()
         y = theano.tensor.nnet.bn.batch_normalization(
             inputs=x, gamma=gammas, beta=betas,
             mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var)),
@@ -240,97 +241,168 @@ class LSTM(object):
     def allocate_parameters(self, args):
         if not hasattr(self, "parameters"):
             self.parameters = Empty()
-            parameters_list = [
-                theano.shared(zeros((args.num_hidden,)), name="h0"),
-                theano.shared(zeros((args.num_hidden,)), name="c0"),
-                theano.shared(np.concatenate([np.eye(args.num_hidden),
-                                              orthogonal((args.num_hidden, 3 * args.num_hidden)),],
-                                             axis=1).astype(theano.config.floatX), name="Wa"),
-                theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx"),
-                theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
-                theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
-                theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas"),
-                theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="c_gammas"),
-                theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="c_betas")]
 
-            for parameter in parameters_list:
-                add_role(parameter, PARAMETER)
-                setattr(self.parameters, parameter.name, parameter)
+        h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
+        c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
+        Wa = theano.shared(np.concatenate([
+            np.eye(args.num_hidden),
+            orthogonal((args.num_hidden,
+                        3 * args.num_hidden)),], axis=1).astype(theano.config.floatX), name="Wa")
+        Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
+        a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
+        b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
+        ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
 
         # forget gate bias initialization
-        ab_betas = self.parameters.ab_betas
         forget_biais = ab_betas.get_value()
         forget_biais[args.num_hidden:2*args.num_hidden] = 1.
         ab_betas.set_value(forget_biais)
+
+        c_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="c_gammas")
+        c_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="c_betas")
+
+        if not args.baseline:
+            parameters_list = [h0, c0, Wa, Wx, a_gammas, b_gammas, ab_betas, c_gammas, c_betas]
+        else:
+            parameters_list = [h0, c0, Wa, Wx, ab_betas, c_betas]
+        for parameter in parameters_list:
+            print parameter.name
+            add_role(parameter, PARAMETER)
+            setattr(self.parameters, parameter.name, parameter)
+
         return self.parameters
 
-    def construct_graph(self, args, x, length, popstats=None):
+
+    def construct_graph_ref(self, args, x, length, popstats=None):
+
         p = self.allocate_parameters(args)
 
-        def stepfn(x, dummy_h, dummy_c, h, c,
-                   a_mean, b_mean, c_mean,
-                   a_var, b_var, c_var):
+        if args.baseline:
+            def bn(x, gammas, betas):
+                return x + betas
+        else:
+            def bn(x, gammas, betas):
+                mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
+                # if only
+                mean.tag.batchstat, var.tag.batchstat = True, True
+                #var = T.maximum(var, args.epsilon)
+                var = var + args.epsilon
+                return (x - mean) / T.sqrt(var) * gammas + betas
+
+        def stepfn(x, dummy_h, dummy_c, h, c):
+            # a_mean, b_mean, c_mean,
+            # a_var, b_var, c_var):
+
+            a_mean, b_mean, c_mean = 0, 0, 0
+            a_var, b_var, c_var = 0, 0, 0
 
             atilde = T.dot(h, p.Wa)
             btilde = x
-            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, p.ab_betas, a_mean, a_var, args)
-            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0,          b_mean, b_var, args)
+            a_normal = bn(atilde, p.a_gammas, p.ab_betas)
+            b_normal = bn(btilde, p.b_gammas, 0)
             ab = a_normal + b_normal
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
-            c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, c_mean, c_var, args)
+            c_normal = bn(c, p.c_gammas, p.c_betas)
             h = dummy_h + o * self.activation(c_normal)
-            return locals()
+            import pdb; pdb.set_trace()
+            return h, c, atilde, btilde, c_normal
 
 
-        symlength = x.shape[0]
-        batch_size = x.shape[1]
-        dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
-                            c=T.zeros((symlength, batch_size, args.num_hidden)))
 
         xtilde = T.dot(x, p.Wx)
-        sequences = dict(x=xtilde,
-                         dummy_h=dummy_states["h"],
-                         dummy_c=dummy_states["c"])
-        outputs_info = dict(h=T.repeat(p.h0[None, :], batch_size, axis=0),
-                            c=T.repeat(p.c0[None, :], batch_size, axis=0),
-                            atilde=None, btilde=None)
-        non_sequences = dict()
+        h_prime = 0
+        dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                            c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
 
-        for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-            for stat, init in zip("mean var".split(), [0, 1]):
-                name = "%s_%s" % (key, stat)
-                if popstats:
-                    ### All sequence are fixed size for sequential mnist
-                    sequences[name] =  popstats[name][:symlength]
-                else:
-                    # provide outputs to allow the stepfn to estimate batch
-                    # statistics as recurrent running average
-                    outputs_info[name] = init + T.zeros((size,))
-
-        outputs, updates = util.scan(
+        [h, c, atilde, btilde, htilde], _ = theano.scan(
             stepfn,
-            sequences=sequences,
-            outputs_info=outputs_info,
-            non_sequences=non_sequences)
+            sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
+            outputs_info=[T.repeat(p.h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+                          T.repeat(p.c0[None, :], xtilde.shape[1], axis=0),
+                          None, None, None])
+        return dict(h=h, c=c,
+                    atilde=atilde, btilde=btilde, htilde=htilde), [], dummy_states, popstats
 
-        if not popstats:
-            # prepare population statistic estimation
-            popstats = dict()
-            alpha = 1e-2
+    def construct_graph_popstats(self, args, x, length, popstats=None):
+        p = self.allocate_parameters(args)
+
+
+        def stepfn(x, dummy_h, dummy_c,
+                   pop_means_a, pop_means_b, pop_means_c,
+                   pop_vars_a, pop_vars_b, pop_vars_c,
+                   h, c):
+
+            atilde = T.dot(h, p.Wa)
+            btilde = x
+            if args.baseline:
+                a_normal, a_mean, a_var = bn(atilde, 1.0, p.ab_betas, pop_means_a, pop_vars_a, args)
+                b_normal, b_mean, b_var = bn(btilde, 1.0, 0,          pop_means_b, pop_vars_b, args)
+            else:
+                a_normal, a_mean, a_var = bn(atilde, p.a_gammas, p.ab_betas, pop_means_a, pop_vars_a, args)
+                b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0,          pop_means_b, pop_vars_b, args)
+            ab = a_normal + b_normal
+            g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
+                          for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
+            c = dummy_c + f * c + i * g
+            if args.baseline:
+                c_normal, c_mean, c_var = bn(c, 1.0, p.c_betas, pop_means_c, pop_vars_c, args)
+            else:
+                c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, pop_means_c, pop_vars_c, args)
+            h = dummy_h + o * self.activation(c_normal)
+            return (h, c, atilde, btilde, c_normal,
+                    a_mean, b_mean, c_mean,
+                    a_var, b_var, c_var)
+
+
+        xtilde = T.dot(x, p.Wx)
+        h_prime = 0
+        dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
+                            c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
+
+        if popstats is None:
+            popstats = OrderedDict()
             for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
                 for stat, init in zip("mean var".split(), [0, 1]):
                     name = "%s_%s" % (key, stat)
                     popstats[name] = theano.shared(
                         init + np.zeros((length, size,), dtype=theano.config.floatX),
                         name=name)
-                    popstats[name].tag.estimand = outputs[name]
-                    ## FIXME we don't need to estimate the popstat here
-                    #updates[popstats[name]] = (alpha * outputs[name] +
-                    #                           (1 - alpha) * popstats[name])
+        popstats_seq = [popstats['a_mean'], popstats['b_mean'], popstats['c_mean'],
+                        popstats['a_var'], popstats['b_var'], popstats['c_var']]
 
-            return outputs, updates, dummy_states, popstats
+        [h, c, atilde, btilde, htilde,
+         batch_mean_a, batch_mean_b, batch_mean_c,
+         batch_var_a, batch_var_b, batch_var_c ], _ = theano.scan(
+             stepfn,
+             sequences=[xtilde, dummy_states["h"], dummy_states["c"]] + popstats_seq,
+             outputs_info=[T.repeat(p.h0[None, :], xtilde.shape[1], axis=0) + h_prime,
+                           T.repeat(p.c0[None, :], xtilde.shape[1], axis=0),
+                           None, None, None,
+                           None, None, None,
+                           None, None, None])
+
+        batchstats = OrderedDict()
+        batchstats['a_mean'] = batch_mean_a
+        batchstats['b_mean'] = batch_mean_b
+        batchstats['c_mean'] = batch_mean_c
+        batchstats['a_var'] = batch_var_a
+        batchstats['b_var'] = batch_var_b
+        batchstats['c_var'] = batch_var_c
+
+        updates = OrderedDict()
+        if not args.use_population_statistics:
+            alpha = 1e-2
+            for key in "abc":
+                for stat, init in zip("mean var".split(), [0, 1]):
+                    name = "%s_%s" % (key, stat)
+                    popstats[name].tag.estimand = batchstats[name]
+                    import pdb; pdb.set_trace()
+                    updates[popstats[name]] = (alpha * batchstats[name] +
+                                               (1 - alpha) * batchstats[name])
+        return dict(h=h, c=c,
+                    atilde=atilde, btilde=btilde, htilde=htilde), updates, dummy_states, popstats
 
 
 def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
@@ -364,39 +436,52 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
 def construct_graphs(args, nclasses, length):
     constructor = LSTM if args.lstm else RNN
 
+    if args.permuted:
+        permutation = np.random.randint(0, length, size=(length,))
+
+
     Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
-    add_role(Wy, PARAMETER)
-    add_role(by, PARAMETER)
-
 
     ### graph construction
     inputs = dict(features=T.tensor4("features"), targets=T.imatrix("targets"))
     x, y = inputs["features"], inputs["targets"]
 
-    #theano.config.compute_test_value = "warn"
-    #x.tag.test_value = np.random.random((args.batch_size, 28, 28, 1)).astype(theano.config.floatX)
-    #y.tag.test_value = np.ones((args.batch_size, 1)).astype(np.int32)
+    theano.config.compute_test_value = "warn"
+    x.tag.test_value = np.random.random((args.batch_size, 28, 28, 1)).astype(theano.config.floatX)
+    y.tag.test_value = np.ones((args.batch_size, 1)).astype(np.int32)
 
     x = x.reshape((x.shape[0], length, 1))
     y = y.flatten(ndim=1)
     x = x.dimshuffle(1, 0, 2)
 
     if args.permuted:
-        permutation = np.random.randint(0, length, size=(length,))
         x = x[permutation]
 
     args.use_population_statistics = False
     turd = constructor(args, nclasses)
-    (outputs, training_updates, dummy_states, popstats) = turd.construct_graph(
-        args, x, length)
+    (outputs, training_updates, dummy_states, popstats) = turd.construct_graph_popstats(args, x, length)
+
+    #args.noise = None
+    #args.summarize = False
+    #outputs, dummy_states, parameters = construct_lstm(args, x=x, activation=activations[args.activation])
+    #training_updates = []
+    inference_updates = []
     training_graph, training_extensions = construct_common_graph("training", args, outputs, dummy_states, Wy, by, y)
+
     args.use_population_statistics = True
-    (outputs, inference_updates, dummy_states, _) = turd.construct_graph(
-        args, x, length)
-     # use popstats from previous invocation
-     #popstats=popstats)
+    (outputs, inference_updates, dummy_states, _) = turd.construct_graph_popstats(args, x, length, popstats=popstats)
+
+    #parameters.extend([Wy, by])
+    #for parameter in parameters:
+    #    add_role(parameter, PARAMETER)
+
+
     inference_graph, inference_extensions = construct_common_graph("inference", args, outputs, dummy_states, Wy, by, y)
+
+    add_role(Wy, PARAMETER)
+    add_role(by, PARAMETER)
+    #inference_graph, inference_extensions = training_graph, training_extensions
     args.use_population_statistics = False
     return (dict(training=training_graph,      inference=inference_graph),
             dict(training=training_extensions, inference=inference_extensions),
@@ -413,8 +498,8 @@ if __name__ == "__main__":
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--epsilon", type=float, default=1e-5)
     parser.add_argument("--batch-size", type=int, default=100)
-    #parser.add_argument("--noise", type=float, default=None)
-    #parser.add_argument("--summarize", action="store_true")
+    parser.add_argument("--noise", type=float, default=None)
+    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--num-hidden", type=int, default=100)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
@@ -429,6 +514,7 @@ if __name__ == "__main__":
     #assert not (args.noise and args.summarize)
     np.random.seed(args.seed)
     blocks.config.config.default_seed = args.seed
+
 
     if args.continue_from:
         from blocks.serialization import load
@@ -445,13 +531,13 @@ if __name__ == "__main__":
         RMSProp(learning_rate=args.learning_rate, decay_rate=0.9),
     ])
 
-    import pdb; pdb.set_trace()
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
                                 parameters=graphs["training"].parameters,
                                 step_rule=step_rule)
-    algorithm.add_updates(updates["training"])
+    #algorithm.add_updates(updates["training"])
     model = Model(graphs["training"].outputs[0])
-    extensions = extensions["training"] #+ extensions["inference"]
+    extensions = extensions["training"] + extensions["inference"]
+
 
     # step monitor (after epoch to limit the log size)
     step_channels = []
@@ -472,8 +558,16 @@ if __name__ == "__main__":
         data_stream=None, after_epoch=True))
 
     # performance monitor
-    for situation in "training inference".split():
+    for situation in "training".split(): # add inference
         for which_set in "train valid test".split():
+            logger.warning("constructing %s %s monitor" % (which_set, situation))
+            channels = list(graphs[situation].outputs)
+            extensions.append(DataStreamMonitoring(
+                channels,
+                prefix="%s_%s" % (which_set, situation), after_epoch=True,
+                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size))) #, num_examples=1000)))
+    for situation in "inference".split(): # add inference
+        for which_set in "valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)
             extensions.append(DataStreamMonitoring(
