@@ -44,6 +44,9 @@ def orthogonal(shape):
     q = q.reshape(shape)
     return q[:shape[0], :shape[1]].astype(theano.config.floatX)
 
+def uniform(shape, scale):
+    return np.random.uniform(-scale, +scale, size=shape).astype(theano.config.floatX)
+
 def softmax_lastaxis(x):
     # for sequence of distributions
     return T.nnet.softmax(x.reshape((-1, x.shape[-1]))).reshape(x.shape)
@@ -52,38 +55,43 @@ def crossentropy_lastaxes(yhat, y):
     # for sequence of distributions/targets
     return -(y * T.log(yhat)).sum(axis=yhat.ndim - 1)
 
+_data_cache = dict()
+def get_data(which_set):
+    if which_set not in _data_cache:
+        path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
+        data = np.load(path)
+        # put the entire thing on GPU in one-hot (takes
+        # len(self.vocab) * len(self.data) * sizeof(floatX) bytes
+        # which is about 1G for the training set and less for the
+        # other sets)
+        CudaNdarray = theano.sandbox.cuda.cuda_ndarray.cuda_ndarray.CudaNdarray
+        # (doing it in numpy first because cudandarray doesn't accept
+        # lists of indices)
+        one_hot_data = np.eye(len(data["vocab"]), dtype=theano.config.floatX)[data[which_set]]
+        _data_cache[which_set] = CudaNdarray(one_hot_data)
+    return _data_cache[which_set]
+
 class PTB(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
     def __init__(self, which_set, length, overlapping=False):
+        assert not overlapping
         self.length = length
         self.overlapping = overlapping
-        path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
-        data = np.load(path)
-        self.vocab = data["vocab"]
-        self.data = data[which_set]
-        if self.overlapping:
-            self.num_examples = len(self.data) - self.length + 1
-        else:
-            # drops last ragged batch
-            self.num_examples = int(len(self.data) / self.length)
+        self.data = get_data(which_set)
+        # reshape to nonoverlapping examples (drops last ragged batch)
+        self.num_examples = int(len(self.data) / self.length)
+        self.data = (self.data
+                     [:self.num_examples * self.length]
+                     .reshape((self.num_examples, self.length, self.data.shape[1])))
         super(PTB, self).__init__()
 
     def get_data(self, state=None, request=None):
-        if isinstance(request, slice):
-            request = list(range(request.start, request.stop, request.step))
-        batch = np.zeros((len(request), self.length, len(self.vocab)), dtype=theano.config.floatX)
-        for i, start in enumerate(request):
-            offset = start
-            if not self.overlapping:
-                offset *= self.length
-            # one-hot
-            batch[i, list(range(self.length)), self.data[offset:offset + self.length]] = 1.
-        if False:
-            #import pdb; pdb.set_trace()
-            assert np.allclose(batch.sum(axis=2), 1)
-        return (batch,)
+        if isinstance(request, (tuple, list)):
+            request = np.array(request, dtype=np.int64)
+            return (self.data.take(request, 0),)
+        return (self.data[request],)
 
 def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
     dataset = PTB(which_set, length=length, overlapping=overlapping)
@@ -131,18 +139,17 @@ class LSTM(object):
         if not hasattr(self, "parameters"):
             # dicts suck
             self.parameters = Pain()
+            Wa = args.initializer((args.num_hidden, 4 * args.num_hidden))
+            Wx = args.initializer((self.nclasses, 4 * args.num_hidden))
+
             if args.initialization == "identity":
-                Wa = np.concatenate([
-                    np.eye(args.num_hidden),
-                    orthogonal((args.num_hidden, 3 * args.num_hidden)),
-                ], axis=1)
-            elif args.initialization == "orthogonal":
-                Wa = orthogonal((args.num_hidden, 4 * args.num_hidden))
+                Wa[:args.num_hidden, :args.num_hidden] = np.eye(args.num_hidden)
+
             for parameter in [
                     theano.shared(zeros((args.num_hidden,)), name="h0"),
                     theano.shared(zeros((args.num_hidden,)), name="c0"),
-                    theano.shared(Wa.astype(theano.config.floatX), name="Wa"),
-                    theano.shared(orthogonal((self.nclasses, 4 * args.num_hidden)), name="Wx"),
+                    theano.shared(Wa, name="Wa"),
+                    theano.shared(Wx, name="Wx"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
                     theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas"),
@@ -284,7 +291,12 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
 def construct_graphs(args, nclasses):
     constructor = LSTM if args.lstm else RNN
 
-    Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
+    if args.initialization in "identity orthogonal".split():
+        args.initializer = orthogonal
+    elif args.initialization == "uniform":
+        args.initializer = lambda shape: uniform(shape, 0.01)
+
+    Wy = theano.shared(args.initializer((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
     for parameter in [Wy, by]:
         add_role(parameter, PARAMETER)
@@ -332,11 +344,12 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initialization", choices="identity orthogonal".split(), default="identity")
+    parser.add_argument("--initialization", choices="identity orthogonal uniform".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
+    parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
@@ -352,10 +365,13 @@ if __name__ == "__main__":
     graphs, extensions, updates = construct_graphs(args, nclasses)
 
     ### optimization algorithm definition
+    if args.optimizer == "rmsprop":
+        optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
+    elif args.optimizer == "sgdmomentum":
+        optimizer = Momentum(learning_rate=args.learning_rate, momentum=0.99)
     step_rule = CompositeRule([
         StepClipping(1.),
-        #Momentum(learning_rate=args.learning_rate, momentum=0.9),
-        RMSProp(learning_rate=args.learning_rate, decay_rate=0.9),
+        optimizer,
     ])
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
                                 parameters=graphs["training"].parameters,
@@ -383,7 +399,7 @@ if __name__ == "__main__":
         data_stream=None, after_epoch=True))
 
     # performance monitor
-    for situation in "training inference".split():
+    for situation in "training".split(): #"training inference".split():
         for which_set in "train valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)

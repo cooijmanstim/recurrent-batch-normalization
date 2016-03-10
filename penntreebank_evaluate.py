@@ -6,6 +6,7 @@ import util
 
 from penntreebank import PTB, get_stream
 
+# argument: path to a checkpoint file
 main_loop = load(sys.argv[1])
 print main_loop.log.current_row
 
@@ -28,8 +29,9 @@ if updates:
         # FRAGILE
         assert value.owner.op.scalar_op == theano.scalar.add
         terms = value.owner.inputs
-        # right multiplicand is hostfromgpu(popstat)
-        assert terms[1].owner.inputs[1].owner.inputs[0] == popstat
+        # right multiplicand of second term is popstat
+        assert popstat in theano.gof.graph.ancestors([terms[1].owner.inputs[1]])
+        # right multiplicand of first term is batchstat
         batchstat = terms[0].owner.inputs[1]
 
         old_popstats[popstat] = popstat.get_value()
