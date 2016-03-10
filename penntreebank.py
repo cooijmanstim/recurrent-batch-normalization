@@ -55,38 +55,43 @@ def crossentropy_lastaxes(yhat, y):
     # for sequence of distributions/targets
     return -(y * T.log(yhat)).sum(axis=yhat.ndim - 1)
 
+_data_cache = dict()
+def get_data(which_set):
+    if which_set not in _data_cache:
+        path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
+        data = np.load(path)
+        # put the entire thing on GPU in one-hot (takes
+        # len(self.vocab) * len(self.data) * sizeof(floatX) bytes
+        # which is about 1G for the training set and less for the
+        # other sets)
+        CudaNdarray = theano.sandbox.cuda.cuda_ndarray.cuda_ndarray.CudaNdarray
+        # (doing it in numpy first because cudandarray doesn't accept
+        # lists of indices)
+        one_hot_data = np.eye(len(data["vocab"]), dtype=theano.config.floatX)[data[which_set]]
+        _data_cache[which_set] = CudaNdarray(one_hot_data)
+    return _data_cache[which_set]
+
 class PTB(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
     def __init__(self, which_set, length, overlapping=False):
+        assert not overlapping
         self.length = length
         self.overlapping = overlapping
-        path = os.environ["CHAR_LEVEL_PENNTREE_NPZ"]
-        data = np.load(path)
-        self.vocab = data["vocab"]
-        self.data = data[which_set]
-        if self.overlapping:
-            self.num_examples = len(self.data) - self.length + 1
-        else:
-            # drops last ragged batch
-            self.num_examples = int(len(self.data) / self.length)
+        self.data = get_data(which_set)
+        # reshape to nonoverlapping examples (drops last ragged batch)
+        self.num_examples = int(len(self.data) / self.length)
+        self.data = (self.data
+                     [:self.num_examples * self.length]
+                     .reshape((self.num_examples, self.length, self.data.shape[1])))
         super(PTB, self).__init__()
 
     def get_data(self, state=None, request=None):
-        if isinstance(request, slice):
-            request = list(range(request.start, request.stop, request.step))
-        batch = np.zeros((len(request), self.length, len(self.vocab)), dtype=theano.config.floatX)
-        for i, start in enumerate(request):
-            offset = start
-            if not self.overlapping:
-                offset *= self.length
-            # one-hot
-            batch[i, list(range(self.length)), self.data[offset:offset + self.length]] = 1.
-        if False:
-            #import pdb; pdb.set_trace()
-            assert np.allclose(batch.sum(axis=2), 1)
-        return (batch,)
+        if isinstance(request, (tuple, list)):
+            request = np.array(request, dtype=np.int64)
+            return (self.data.take(request, 0),)
+        return (self.data[request],)
 
 def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
     dataset = PTB(which_set, length=length, overlapping=overlapping)
