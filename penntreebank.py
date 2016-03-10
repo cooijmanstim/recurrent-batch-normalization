@@ -44,6 +44,9 @@ def orthogonal(shape):
     q = q.reshape(shape)
     return q[:shape[0], :shape[1]].astype(theano.config.floatX)
 
+def uniform(shape, scale):
+    return np.random.uniform(-scale, +scale, size=shape).astype(theano.config.floatX)
+
 def softmax_lastaxis(x):
     # for sequence of distributions
     return T.nnet.softmax(x.reshape((-1, x.shape[-1]))).reshape(x.shape)
@@ -131,18 +134,17 @@ class LSTM(object):
         if not hasattr(self, "parameters"):
             # dicts suck
             self.parameters = Pain()
+            Wa = args.initializer((args.num_hidden, 4 * args.num_hidden))
+            Wx = args.initializer((self.nclasses, 4 * args.num_hidden))
+
             if args.initialization == "identity":
-                Wa = np.concatenate([
-                    np.eye(args.num_hidden),
-                    orthogonal((args.num_hidden, 3 * args.num_hidden)),
-                ], axis=1)
-            elif args.initialization == "orthogonal":
-                Wa = orthogonal((args.num_hidden, 4 * args.num_hidden))
+                Wa[:args.num_hidden, :args.num_hidden] = np.eye(args.num_hidden)
+
             for parameter in [
                     theano.shared(zeros((args.num_hidden,)), name="h0"),
                     theano.shared(zeros((args.num_hidden,)), name="c0"),
-                    theano.shared(Wa.astype(theano.config.floatX), name="Wa"),
-                    theano.shared(orthogonal((self.nclasses, 4 * args.num_hidden)), name="Wx"),
+                    theano.shared(Wa, name="Wa"),
+                    theano.shared(Wx, name="Wx"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
                     theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
                     theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas"),
@@ -284,7 +286,12 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
 def construct_graphs(args, nclasses):
     constructor = LSTM if args.lstm else RNN
 
-    Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
+    if args.initialization in "identity orthogonal".split():
+        args.initializer = orthogonal
+    elif args.initialization == "uniform":
+        args.initializer = lambda shape: uniform(shape, 0.01)
+
+    Wy = theano.shared(args.initializer((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
     for parameter in [Wy, by]:
         add_role(parameter, PARAMETER)
@@ -332,7 +339,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initialization", choices="identity orthogonal".split(), default="identity")
+    parser.add_argument("--initialization", choices="identity orthogonal uniform".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
