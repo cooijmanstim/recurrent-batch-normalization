@@ -163,10 +163,13 @@ class LSTM(object):
 
         h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
         c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
-        Wa = theano.shared(np.concatenate([
-            np.eye(args.num_hidden),
-            orthogonal((args.num_hidden,
-                        3 * args.num_hidden)),], axis=1).astype(theano.config.floatX), name="Wa")
+        if args.init == "ortho":
+            Wa = theano.shared(np.concatenate([
+                np.eye(args.num_hidden),
+                orthogonal((args.num_hidden,
+                            3 * args.num_hidden)),], axis=1).astype(theano.config.floatX), name="Wa")
+        else:
+            Wa = theano.shared(orthogonal((args.num_hidden, 4 * args.num_hidden)), name="Wa")
         Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
         a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
         b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
@@ -411,6 +414,7 @@ if __name__ == "__main__":
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
+    parser.add_argument("--init", type=str, default="ortho")
     parser.add_argument("--continue-from")
     parser.add_argument("--permuted", action="store_true")
     args = parser.parse_args()
