@@ -70,7 +70,7 @@ results["proper_test"] = evaluator.evaluate(
         batch_size=100))
 
 print 'Results: ', results["proper_test"]
-
+import cPickle
 cPickle.dump(dict(results=results,
                   old_popstats=old_popstats,
                   new_popstats=new_popstats),
