@@ -158,8 +158,10 @@ class LSTM(object):
         self.activation = activations[args.activation]
 
     def allocate_parameters(self, args):
-        if not hasattr(self, "parameters"):
-            self.parameters = Empty()
+        if hasattr(self, "parameters"):
+            return self.parameters
+
+        self.parameters = Empty()
 
         h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
         c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
@@ -359,7 +361,6 @@ def construct_graphs(args, nclasses, length):
     if args.permuted:
         permutation = np.random.randint(0, length, size=(length,))
 
-
     Wy = theano.shared(orthogonal((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
 
@@ -367,9 +368,9 @@ def construct_graphs(args, nclasses, length):
     inputs = dict(features=T.tensor4("features"), targets=T.imatrix("targets"))
     x, y = inputs["features"], inputs["targets"]
 
-    theano.config.compute_test_value = "warn"
-    x.tag.test_value = np.random.random((args.batch_size, 28, 28, 1)).astype(theano.config.floatX)
-    y.tag.test_value = np.ones((args.batch_size, 1)).astype(np.int32)
+    #theano.config.compute_test_value = "warn"
+    #x.tag.test_value = np.random.random((args.batch_size, 28, 28, 1)).astype(theano.config.floatX)
+    #y.tag.test_value = np.ones((args.batch_size, 1)).astype(np.int32)
 
     x = x.reshape((x.shape[0], length, 1))
     y = y.flatten(ndim=1)
@@ -384,8 +385,8 @@ def construct_graphs(args, nclasses, length):
     training_graph, training_extensions = construct_common_graph("training", args, outputs, dummy_states, Wy, by, y)
 
     args.use_population_statistics = True
-    (outputs, inference_updates, dummy_states, _) = turd.construct_graph_popstats(args, x, length, popstats=popstats)
-    inference_graph, inference_extensions = construct_common_graph("inference", args, outputs, dummy_states, Wy, by, y)
+    (inf_outputs, inference_updates, dummy_states, _) = turd.construct_graph_popstats(args, x, length, popstats=popstats)
+    inference_graph, inference_extensions = construct_common_graph("inference", args, inf_outputs, dummy_states, Wy, by, y)
 
     add_role(Wy, PARAMETER)
     add_role(by, PARAMETER)
