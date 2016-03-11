@@ -78,7 +78,7 @@ def get_stream(which_set, batch_size, num_examples=None):
 
 #     parameters.extend([h0, Wh, Wx])
 
-#     gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="gammas")
+#     gammas = theano.shared(args.inital_gamma * ones((args.num_hidden,)), name="gammas")
 #     betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
 
 #     if args.baseline:
@@ -163,7 +163,7 @@ class LSTM(object):
 
         h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
         c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
-        if args.init == "ortho":
+        if args.init == "id":
             Wa = theano.shared(np.concatenate([
                 np.eye(args.num_hidden),
                 orthogonal((args.num_hidden,
