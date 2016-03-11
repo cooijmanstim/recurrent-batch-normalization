@@ -322,7 +322,7 @@ class LSTM(object):
                     name = "%s_%s" % (key, stat)
                     popstats[name].tag.estimand = batchstats[name]
                     updates[popstats[name]] = (alpha * batchstats[name] +
-                                               (1 - alpha) * batchstats[name])
+                                               (1 - alpha) * popstats[name])
         return dict(h=h, c=c,
                     atilde=atilde, btilde=btilde, htilde=htilde), updates, dummy_states, popstats
 
