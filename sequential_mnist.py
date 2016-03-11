@@ -438,7 +438,7 @@ if __name__ == "__main__":
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
                                 parameters=graphs["training"].parameters,
                                 step_rule=step_rule)
-    #algorithm.add_updates(updates["training"])
+    algorithm.add_updates(updates["training"])
     model = Model(graphs["training"].outputs[0])
     extensions = extensions["training"] + extensions["inference"]
 
