@@ -127,15 +127,12 @@ def construct_lstm(args, x, activation):
 
     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
     c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
-    Wa = theano.shared(np.concatenate([
-        np.eye(args.num_hidden),
-        orthogonal((args.num_hidden, 3 * args.num_hidden)),
-    ], axis=1).astype(theano.config.floatX), name="Wa")
+    # Wa = theano.shared(np.concatenate([
+    #     np.eye(args.num_hidden),
+    #     orthogonal((args.num_hidden, 3 * args.num_hidden)),
+    # ], axis=1).astype(theano.config.floatX), name="Wa")
 
-    #Wa = theano.shared(np.concatenate([
-    #    orthogonal((args.num_hidden, args.num_hidden)),
-    #    orthogonal((args.num_hidden, 3 * args.num_hidden)),
-    #], axis=1).astype(theano.config.floatX), name="Wa")
+    Wa = theano.shared(orthogonal((args.num_hidden, 4 * args.num_hidden)), name="Wa")
     Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
 
     parameters.extend([h0, c0, Wa, Wx])
@@ -215,7 +212,6 @@ def bn(x, gammas, betas, mean, var, args):
     if args.baseline:
         y = x + betas
     else:
-        import pdb; pdb.set_trace()
         y = theano.tensor.nnet.bn.batch_normalization(
             inputs=x, gamma=gammas, beta=betas,
             mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var)),
@@ -306,7 +302,6 @@ class LSTM(object):
             c = dummy_c + f * c + i * g
             c_normal = bn(c, p.c_gammas, p.c_betas)
             h = dummy_h + o * self.activation(c_normal)
-            import pdb; pdb.set_trace()
             return h, c, atilde, btilde, c_normal
 
 
@@ -398,7 +393,6 @@ class LSTM(object):
                 for stat, init in zip("mean var".split(), [0, 1]):
                     name = "%s_%s" % (key, stat)
                     popstats[name].tag.estimand = batchstats[name]
-                    import pdb; pdb.set_trace()
                     updates[popstats[name]] = (alpha * batchstats[name] +
                                                (1 - alpha) * batchstats[name])
         return dict(h=h, c=c,
