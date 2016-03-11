@@ -108,23 +108,19 @@ activations = dict(
     relu=lambda x: T.max(0, x))
 
 def bn(x, gammas, betas, args, mean=None, var=None):
-    if args.baseline:
-        return x + betas, mean, var
     assert x.ndim == 2
-    if not args.use_population_statistics:
-        mean = x.mean(axis=0)
-        var = x.var(axis=0)
+    mean = x.mean(axis=0) if mean is None else mean
+    var  = x.var (axis=0) if var  is None else var
     assert mean.ndim == 1
     assert var.ndim == 1
-    #var = T.maximum(var, args.epsilon)
-    var = var + args.epsilon
-    y = theano.tensor.nnet.bn.batch_normalization(
-        inputs=x,
-        gamma=gammas, beta=betas,
-        mean=T.shape_padleft(mean),
-        std=T.shape_padleft(T.sqrt(var)))
-    assert mean.ndim == 1
-    assert var.ndim == 1
+    if args.baseline:
+        y = x + betas
+    else:
+        y = theano.tensor.nnet.bn.batch_normalization(
+            inputs=x,
+            gamma=gammas, beta=betas,
+            mean=T.shape_padleft(mean),
+            std=T.shape_padleft(T.sqrt(var + args.epsilon)))
     return y, mean, var
 
 class Pain(object):
@@ -178,7 +174,13 @@ class LSTM(object):
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
 
-        def stepfn(t, long_sequence_is_long, x, dummy_h, dummy_c, h, c, **popstats):
+        output_names = "h c atilde btilde a_mean a_var b_mean b_var c_mean c_var".split()
+
+        def stepfn(t, long_sequence_is_long, x, dummy_h, dummy_c, h, c):
+            # population statistics are sequences, but we use them
+            # like a non-sequence and index it ourselves. this allows
+            # us to generalize to longer sequences, in which case we
+            # repeat the last element.
             popstats_by_key = dict()
             for key in "abc":
                 popstats_by_key[key] = dict()
@@ -205,53 +207,36 @@ class LSTM(object):
             c = dummy_c + f * c + i * g
             c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, args, **popstats_by_key["c"])
             h = dummy_h + o * self.activation(c_normal)
-            return locals()
 
-        sequences = dict(t=t, x=x, long_sequence_is_long=long_sequence_is_long,
-                         dummy_h=dummy_states["h"],
-                         dummy_c=dummy_states["c"])
-        outputs_info = dict(h=T.repeat(p.h0[None, :], batch_size, axis=0),
-                            c=T.repeat(p.c0[None, :], batch_size, axis=0),
-                            atilde=None, btilde=None)
-        non_sequences = dict()
+            return [locals()[name] for name in output_names]
 
-        if not args.baseline:
+        sequences = [t, long_sequence_is_long, x, dummy_states["h"], dummy_states["c"]]
+        outputs_info = [
+            T.repeat(p.h0[None, :], batch_size, axis=0),
+            T.repeat(p.c0[None, :], batch_size, axis=0),
+        ]
+        outputs_info.extend([None] * (len(output_names) - len(outputs_info)))
+
+        outputs, updates = theano.scan(
+            stepfn,
+            sequences=sequences,
+            outputs_info=outputs_info)
+        outputs = dict(zip(output_names, outputs))
+
+        if not args.baseline and not args.use_population_statistics:
+            # prepare population statistic estimation
+            popstats = dict()
+            alpha = 0.005
             for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
                 for stat, init in zip("mean var".split(), [0, 1]):
                     name = "%s_%s" % (key, stat)
-
-                    if args.use_population_statistics:
-                        # population statistics is a sequence, but we pass it in
-                        # as a non-sequence and index it ourselves. this allows us
-                        # to generalize to longer sequences, in which case we
-                        # repeat the last element.
-                        non_sequences[name] = popstats[name]
-                    else:
-                        # provide batch statistic as an output so that we
-                        # can estimate population statistics from them.
-                        outputs_info[name] = None
-
-        outputs, updates = util.scan(
-            stepfn,
-            sequences=sequences,
-            outputs_info=outputs_info,
-            non_sequences=non_sequences)
-
-        if not args.baseline:
-            if not args.use_population_statistics:
-                # prepare population statistic estimation
-                popstats = dict()
-                alpha = 0.005
-                for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-                    for stat, init in zip("mean var".split(), [0, 1]):
-                        name = "%s_%s" % (key, stat)
-                        popstats[name] = theano.shared(
-                            init + np.zeros((length, size,),
-                                            dtype=theano.config.floatX),
-                            name=name)
-                        popstats[name].tag.estimand = outputs[name]
-                        updates[popstats[name]] = (alpha * outputs[name] +
-                                                   (1 - alpha) * popstats[name])
+                    popstats[name] = theano.shared(
+                        init + np.zeros((length, size,),
+                                        dtype=theano.config.floatX),
+                        name=name)
+                    popstats[name].tag.estimand = outputs[name]
+                    updates[popstats[name]] = (alpha * outputs[name] +
+                                               (1 - alpha) * popstats[name])
 
         return outputs, updates, dummy_states, popstats
 
