@@ -122,83 +122,6 @@ def get_stream(which_set, batch_size, num_examples=None):
 
 #     return dict(h=h, htilde=htilde), dummy_states, parameters
 
-def construct_lstm(args, x, activation):
-    parameters = []
-
-    h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
-    c0 = theano.shared(zeros((args.num_hidden,)), name="c0")
-    # Wa = theano.shared(np.concatenate([
-    #     np.eye(args.num_hidden),
-    #     orthogonal((args.num_hidden, 3 * args.num_hidden)),
-    # ], axis=1).astype(theano.config.floatX), name="Wa")
-
-    Wa = theano.shared(orthogonal((args.num_hidden, 4 * args.num_hidden)), name="Wa")
-    Wx = theano.shared(orthogonal((1, 4 * args.num_hidden)), name="Wx")
-
-    parameters.extend([h0, c0, Wa, Wx])
-
-    a_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas")
-    b_gammas = theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas")
-    ab_betas = theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas")
-    h_gammas = theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="h_gammas")
-    h_betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="h_betas")
-
-    # forget gate bias initialization
-    pffft = ab_betas.get_value()
-    pffft[args.num_hidden:2*args.num_hidden] = 1.
-    ab_betas.set_value(pffft)
-
-    if args.baseline:
-        parameters.extend([ab_betas, h_betas])
-        def bn(x, gammas, betas):
-            return x + betas
-    else:
-        parameters.extend([a_gammas, b_gammas, h_gammas, ab_betas, h_betas])
-        def bn(x, gammas, betas):
-            mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-            # if only
-            mean.tag.batchstat, var.tag.batchstat = True, True
-            #var = T.maximum(var, args.epsilon)
-            var = var + args.epsilon
-            return (x - mean) / T.sqrt(var) * gammas + betas
-
-    xtilde = T.dot(x, Wx)
-
-    if args.noise:
-        # prime h with white noise
-        Trng = MRG_RandomStreams()
-        h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-    elif args.summarize:
-        # prime h with mean of example
-        h_prime = x.mean(axis=[0, 2])[:, None]
-    else:
-        h_prime = 0
-
-    dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
-                        c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
-
-    def stepfn(xtilde, dummy_h, dummy_c, h, c):
-        atilde = T.dot(h, Wa)
-        btilde = xtilde
-        a = bn(atilde, a_gammas, ab_betas)
-        b = bn(btilde, b_gammas, 0)
-        #b = btilde
-        ab = a + b
-        g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
-                      for j, fn in enumerate([activation] + 3 * [T.nnet.sigmoid])]
-        c = dummy_c + f * c + i * g
-        htilde = c
-        h = dummy_h + o * activation(bn(htilde, h_gammas, h_betas))
-        return h, c, atilde, btilde, htilde
-
-    [h, c, atilde, btilde, htilde], _ = theano.scan(
-        stepfn,
-        sequences=[xtilde, dummy_states["h"], dummy_states["c"]],
-        outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
-                      T.repeat(c0[None, :], xtilde.shape[1], axis=0),
-                      None, None, None])
-    return dict(h=h, c=c, atilde=atilde, btilde=btilde, htilde=htilde), dummy_states, parameters
-
 def bn(x, gammas, betas, mean, var, args):
     assert mean.ndim == 1
     assert var.ndim == 1
@@ -455,27 +378,14 @@ def construct_graphs(args, nclasses, length):
     args.use_population_statistics = False
     turd = constructor(args, nclasses)
     (outputs, training_updates, dummy_states, popstats) = turd.construct_graph_popstats(args, x, length)
-
-    #args.noise = None
-    #args.summarize = False
-    #outputs, dummy_states, parameters = construct_lstm(args, x=x, activation=activations[args.activation])
-    #training_updates = []
-    inference_updates = []
     training_graph, training_extensions = construct_common_graph("training", args, outputs, dummy_states, Wy, by, y)
 
     args.use_population_statistics = True
     (outputs, inference_updates, dummy_states, _) = turd.construct_graph_popstats(args, x, length, popstats=popstats)
-
-    #parameters.extend([Wy, by])
-    #for parameter in parameters:
-    #    add_role(parameter, PARAMETER)
-
-
     inference_graph, inference_extensions = construct_common_graph("inference", args, outputs, dummy_states, Wy, by, y)
 
     add_role(Wy, PARAMETER)
     add_role(by, PARAMETER)
-    #inference_graph, inference_extensions = training_graph, training_extensions
     args.use_population_statistics = False
     return (dict(training=training_graph,      inference=inference_graph),
             dict(training=training_extensions, inference=inference_extensions),
