@@ -130,14 +130,14 @@ def bn(x, gammas, betas, mean, var, args):
         mean = x.mean(axis=0)
         var = x.var(axis=0)
     #var = T.maximum(var, args.epsilon)
-    var = var + args.epsilon
+    #var = var + args.epsilon
 
     if args.baseline:
         y = x + betas
     else:
         y = theano.tensor.nnet.bn.batch_normalization(
             inputs=x, gamma=gammas, beta=betas,
-            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var)),
+            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var + args.epsilon)),
             mode="high_mem")
     assert mean.ndim == 1
     assert var.ndim == 1
@@ -486,7 +486,7 @@ if __name__ == "__main__":
 
     extensions.extend([
         TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
-        DumpBest("best_valid_traing_error_rate", "best.zip"),
+        DumpBest("best_valid_training_error_rate", "best.zip"),
         FinishAfter(after_n_epochs=args.num_epochs),
         #FinishIfNoImprovementAfter("best_valid_error_rate", epochs=50),
         Checkpoint("checkpoint.zip", on_interrupt=False, every_n_epochs=1, use_cpickle=True),

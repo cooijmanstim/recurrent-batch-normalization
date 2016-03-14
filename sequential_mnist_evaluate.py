@@ -19,21 +19,25 @@ print updates
 
 old_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
+
 # baseline doesn't need all this
 if updates:
-    # -_-
-    nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
+    which_set = "train"
+    batch_size = 5000    # -_-
+    #nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
+    nbatches = len(list(get_stream(which_set=which_set, batch_size=batch_size).get_epoch_iterator()))
 
     # destructure moving average expression to construct a new expression
     new_updates = []
+    batchstat_name = []
+    batchstat_list = []
     for popstat, value in updates:
+
+        print popstat
         # FRAGILE
-        assert value.owner.op.scalar_op == theano.scalar.add
-        terms = value.owner.inputs
-        # right multiplicand of second term is popstat
-        assert popstat in theano.gof.graph.ancestors([terms[1].owner.inputs[1]])
-        # right multiplicand of first term is batchstat
-        batchstat = terms[0].owner.inputs[1]
+        batchstat = popstat.tag.estimand
+        batchstat_name.append(popstat.name)
+        batchstat_list.append(batchstat)
 
         old_popstats[popstat] = popstat.get_value()
 
@@ -41,12 +45,29 @@ if updates:
         # otherwise popstat should always have a reasonable value
         popstat.set_value(0 * popstat.get_value(borrow=True))
         new_updates.append((popstat, popstat + batchstat / float(nbatches)))
+        #new_updates.append((popstat, batchstat))
 
     # FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
-    estimate_fn = theano.function(main_loop.algorithm.inputs, [],
+    estimate_fn = theano.function(main_loop.algorithm.inputs, batchstat_list,
                                   updates=new_updates, on_unused_input="warn")
-    for batch in main_loop.data_stream.get_epoch_iterator(as_dict=True):
-        estimate_fn(**batch)
+
+    bstats = OrderedDict()
+    bstats_mean = OrderedDict()
+    for n in batchstat_name:
+        bstats[n] = []
+        bstats_mean[n] = 0.0
+    for batch in get_stream(which_set=which_set, batch_size=batch_size).get_epoch_iterator(as_dict=True):
+        cur_bstat = estimate_fn(**batch)
+        for i in xrange(len(cur_bstat)):
+            bstats[batchstat_name[i]].append(cur_bstat[i])
+            bstats_mean[batchstat_name[i]] += cur_bstat[i]
+
+    import pdb; pdb.set_trace()
+    for k, v in bstats_mean.items():
+        bstats_mean[k] = v / float(nbatches)
+    #for popstat, value in updates:
+        #popstat.set_value(bstats_mean[popstat.name])
+
 
 new_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
@@ -61,14 +82,18 @@ for situation in "training inference".split():
         if getattr(extension, "prefix", None) == "valid_%s" % situation]
     evaluator = DatasetEvaluator(outputs)
     for which_set in "train valid test".split():
-        results[situation][which_set] = evaluator.evaluate(get_stream(which_set=which_set,
-                                                                      batch_size=1000))
+        if which_set == "test":
+            results[situation][which_set] = evaluator.evaluate(get_stream(which_set=which_set,
+                                                                          batch_size=5000))
+        else:
+            results[situation][which_set] = evaluator.evaluate(get_stream(which_set=which_set,
+                                                                          batch_size=5000))
 
 results["proper_test"] = evaluator.evaluate(
     get_stream(
         which_set="test",
-        batch_size=100))
-
+        batch_size=1000))
+import pdb; pdb.set_trace()
 print 'Results: ', results["proper_test"]
 import cPickle
 cPickle.dump(dict(results=results,
