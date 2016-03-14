@@ -34,7 +34,6 @@ if updates:
     for popstat, value in updates:
 
         print popstat
-        # FRAGILE
         batchstat = popstat.tag.estimand
         batchstat_name.append(popstat.name)
         batchstat_list.append(batchstat)
@@ -61,8 +60,6 @@ if updates:
         for i in xrange(len(cur_bstat)):
             bstats[batchstat_name[i]].append(cur_bstat[i])
             bstats_mean[batchstat_name[i]] += cur_bstat[i]
-
-    import pdb; pdb.set_trace()
     for k, v in bstats_mean.items():
         bstats_mean[k] = v / float(nbatches)
     #for popstat, value in updates:
@@ -93,7 +90,6 @@ results["proper_test"] = evaluator.evaluate(
     get_stream(
         which_set="test",
         batch_size=1000))
-import pdb; pdb.set_trace()
 print 'Results: ', results["proper_test"]
 import cPickle
 cPickle.dump(dict(results=results,
