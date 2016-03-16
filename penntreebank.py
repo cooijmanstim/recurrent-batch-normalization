@@ -336,6 +336,8 @@ def construct_graphs(args, nclasses):
         args.initializer = orthogonal
     elif args.initialization == "uniform":
         args.initializer = lambda shape: uniform(shape, 0.01)
+    elif args.initialization == "glorot":
+        args.initializer = glorot
 
     Wy = theano.shared(args.initializer((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
@@ -385,7 +387,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initialization", choices="identity orthogonal uniform".split(), default="identity")
+    parser.add_argument("--initialization", choices="identity glorot orthogonal uniform".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
