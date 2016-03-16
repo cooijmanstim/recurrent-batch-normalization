@@ -243,12 +243,17 @@ class LSTM(object):
             a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
             b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
             p_normal, p_mean, p_var = self.bn_p.construct_graph(ptilde, baseline=args.baseline, **popstats_by_key["p"])
-            ab = a_normal + b_normal
 
-            if self.peepholes:
-                # peepholes go only to gates, not to g
-                p_normal = T.concatenate([T.zeros((p_normal.shape[0], self.num_hidden)), p_normal], axis=1)
-                ab += p_normal
+            # peepholes go only to gates, not to g
+            p_normal = T.concatenate([T.zeros((p_normal.shape[0], self.num_hidden)), p_normal], axis=1)
+            if not self.peepholes:
+                # if we leave p_normal out of the graph, blocks will
+                # still consider p.Wp a parameter as it is used in
+                # scan outputs, but since it's not part of the graph
+                # computing the cost T.grad will complain
+                p_normal *= 0
+
+            ab = a_normal + b_normal + p_normal
 
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
