@@ -176,8 +176,6 @@ class LSTM(object):
     def allocate_parameters(self):
         parameters = Parameters()
         Wa = self.initializer((self.num_hidden, 4 * self.num_hidden))
-        Wx = self.initializer((self.nclasses, 4 * self.num_hidden))
-        Wp = self.initializer((self.num_hidden, 3 * self.num_hidden))
 
         if self.identity_hh:
             Wa[:self.num_hidden, :self.num_hidden] = np.eye(self.num_hidden)
@@ -186,9 +184,9 @@ class LSTM(object):
                 theano.shared(zeros((self.num_hidden,)), name="h0"),
                 theano.shared(zeros((self.num_hidden,)), name="c0"),
                 theano.shared(Wa, name="Wa"),
-                theano.shared(Wx, name="Wx"),
-                theano.shared(Wp, name="Wp")]:
-            add_role(parameter, PARAMETER)
+                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx"),
+                theano.shared(self.initializer((self.num_hidden, 3 * self.num_hidden)), name="Wp"),
+                theano.shared(self.initializer((self.nclasses, self.num_hidden)), name="Wsummarize")]:
             setattr(parameters, parameter.name, parameter)
 
         # forget gate bias initialization
@@ -210,6 +208,8 @@ class LSTM(object):
         batch_size = x.shape[1]
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
+
+        summary = T.dot(x, p.Wsummarize).mean(axis=0) if args.summarize else 0
 
         output_names = "h c atilde btilde".split()
         for key in "abcp":
@@ -262,7 +262,7 @@ class LSTM(object):
 
         sequences = [t, long_sequence_is_long, x, dummy_states["h"], dummy_states["c"]]
         outputs_info = [
-            T.repeat(p.h0[None, :], batch_size, axis=0),
+            T.repeat(p.h0[None, :], batch_size, axis=0) + summary,
             T.repeat(p.c0[None, :], batch_size, axis=0),
         ]
         outputs_info.extend([None] * (len(output_names) - len(outputs_info)))
@@ -386,6 +386,7 @@ if __name__ == "__main__":
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--peepholes", action="store_true")
     parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
+    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
