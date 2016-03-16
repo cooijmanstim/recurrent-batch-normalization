@@ -187,6 +187,7 @@ class LSTM(object):
                 theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx"),
                 theano.shared(self.initializer((self.num_hidden, 3 * self.num_hidden)), name="Wp"),
                 theano.shared(self.initializer((self.nclasses, self.num_hidden)), name="Wsummarize")]:
+            add_role(parameter, PARAMETER)
             setattr(parameters, parameter.name, parameter)
 
         # forget gate bias initialization
