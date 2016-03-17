@@ -91,7 +91,7 @@ class DumpVariables(SimpleExtension):
         super(DumpVariables, self).__init__(**kwargs)
         self.save_path = save_path
         self.variables = variables
-        self.function = theano.function(inputs, variables)
+        self.function = theano.function(inputs, variables, on_unused_input="warn")
         self.batch = batch
         self.i = 0
 
