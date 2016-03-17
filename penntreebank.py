@@ -381,7 +381,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--length", type=int, default=50)
     parser.add_argument("--num-epochs", type=int, default=100)
-    parser.add_argument("--batch-size", type=int, default=1000)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--epsilon", type=float, default=1e-5)
     parser.add_argument("--num-hidden", type=int, default=1000)
