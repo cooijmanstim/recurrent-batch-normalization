@@ -50,9 +50,9 @@ def scan(fn,
 
     outputs, updates = theano.scan(
         listified_fn,
-        sequences.values(),
-        outputs_info.values(),
-        non_sequences.values(),
+        sequences=sequences.values(),
+        outputs_info=outputs_info.values(),
+        non_sequences=non_sequences.values(),
         **scan_kwargs)
     outputs = OrderedDict(equizip(outputs_info.keys(), outputs))
     return outputs, updates

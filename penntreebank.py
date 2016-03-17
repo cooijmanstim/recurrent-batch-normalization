@@ -107,67 +107,99 @@ activations = dict(
     identity=lambda x: x,
     relu=lambda x: T.max(0, x))
 
-def bn(x, gammas, betas, args, mean=None, var=None):
-    if args.baseline:
-        return x + betas, mean, var
-    assert x.ndim == 2
-    if not args.use_population_statistics:
-        mean = x.mean(axis=0)
-        var = x.var(axis=0)
-    assert mean.ndim == 1
-    assert var.ndim == 1
-    #var = T.maximum(var, args.epsilon)
-    var = var + args.epsilon
-    y = theano.tensor.nnet.bn.batch_normalization(
-        inputs=x,
-        gamma=gammas, beta=betas,
-        mean=T.shape_padleft(mean),
-        std=T.shape_padleft(T.sqrt(var)))
-    assert mean.ndim == 1
-    assert var.ndim == 1
-    return y, mean, var
-
-class Pain(object):
+class Parameters(object):
     pass
+
+class BatchNormalization(object):
+    def __init__(self, shape, initial_gamma=1, initial_beta=0, name=None, use_bias=True):
+        self.shape = shape
+        self.initial_gamma = initial_gamma
+        self.initial_beta = initial_beta
+        self.name = name
+        self.use_bias = use_bias
+
+    @property
+    def parameters(self):
+        if not hasattr(self, "_parameters"):
+            self._parameters = self.allocate_parameters()
+        return self._parameters
+
+    def allocate_parameters(self):
+        parameters = Parameters()
+        for parameter in [
+            theano.shared(self.initial_gamma * ones(self.shape), name="gammas"),
+            theano.shared(self.initial_beta  * ones(self.shape), name="betas")]:
+            add_role(parameter, PARAMETER)
+            setattr(parameters, parameter.name, parameter)
+            if self.name:
+                parameter.name = "%s.%s" % (self.name, parameter.name)
+        return parameters
+
+    def construct_graph(self, x, baseline=False, mean=None, var=None):
+        p = self.parameters
+        assert x.ndim == 2
+        mean = x.mean(axis=0) if mean is None else mean
+        var  = x.var (axis=0) if var  is None else var
+        assert mean.ndim == 1
+        assert var.ndim == 1
+        betas = p.betas if self.use_bias else 0
+        if baseline:
+            y = x + betas
+        else:
+            y = theano.tensor.nnet.bn.batch_normalization(
+                inputs=x,
+                gamma=p.gammas, beta=betas,
+                mean=T.shape_padleft(mean),
+                std=T.shape_padleft(T.sqrt(var + args.epsilon)))
+        return y, mean, var
 
 class LSTM(object):
     def __init__(self, args, nclasses):
+        self.num_hidden = args.num_hidden
+        self.initializer = args.initializer
+        self.identity_hh = args.initialization == "identity"
+        self.peepholes = args.peepholes
         self.nclasses = nclasses
         self.activation = activations[args.activation]
 
-    def allocate_parameters(self, args):
-        if not hasattr(self, "parameters"):
-            # dicts suck
-            self.parameters = Pain()
-            Wa = args.initializer((args.num_hidden, 4 * args.num_hidden))
-            Wx = args.initializer((self.nclasses, 4 * args.num_hidden))
+        self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a")
+        self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", use_bias=False)
+        self.bn_p = BatchNormalization((3 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_p", use_bias=False)
+        self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c")
 
-            if args.initialization == "identity":
-                Wa[:args.num_hidden, :args.num_hidden] = np.eye(args.num_hidden)
+    @property
+    def parameters(self):
+        if not hasattr(self, "_parameters"):
+            self._parameters = self.allocate_parameters()
+        return self._parameters
 
-            for parameter in [
-                    theano.shared(zeros((args.num_hidden,)), name="h0"),
-                    theano.shared(zeros((args.num_hidden,)), name="c0"),
-                    theano.shared(Wa, name="Wa"),
-                    theano.shared(Wx, name="Wx"),
-                    theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="a_gammas"),
-                    theano.shared(args.initial_gamma * ones((4 * args.num_hidden,)), name="b_gammas"),
-                    theano.shared(args.initial_beta  * ones((4 * args.num_hidden,)), name="ab_betas"),
-                    theano.shared(args.initial_gamma * ones((args.num_hidden,)), name="c_gammas"),
-                    theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="c_betas")]:
-                add_role(parameter, PARAMETER)
-                setattr(self.parameters, parameter.name, parameter)
+    def allocate_parameters(self):
+        parameters = Parameters()
+        Wa = self.initializer((self.num_hidden, 4 * self.num_hidden))
+
+        if self.identity_hh:
+            Wa[:self.num_hidden, :self.num_hidden] = np.eye(self.num_hidden)
+
+        for parameter in [
+                theano.shared(zeros((self.num_hidden,)), name="h0"),
+                theano.shared(zeros((self.num_hidden,)), name="c0"),
+                theano.shared(Wa, name="Wa"),
+                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx"),
+                theano.shared(self.initializer((self.num_hidden, 3 * self.num_hidden)), name="Wp"),
+                theano.shared(self.initializer((self.nclasses, self.num_hidden)), name="Wsummarize")]:
+            add_role(parameter, PARAMETER)
+            setattr(parameters, parameter.name, parameter)
 
         # forget gate bias initialization
-        ab_betas = self.parameters.ab_betas
+        ab_betas = self.bn_a.parameters.betas
         pffft = ab_betas.get_value()
-        pffft[args.num_hidden:2*args.num_hidden] = 1.
+        pffft[self.num_hidden:2*self.num_hidden] = 1.
         ab_betas.set_value(pffft)
 
-        return self.parameters
+        return parameters
 
     def construct_graph(self, args, x, length, popstats=None):
-        p = self.allocate_parameters(args)
+        p = self.parameters
 
         # use `symlength` where we need to be able to adapt to longer sequences
         # than the ones we trained on
@@ -178,9 +210,20 @@ class LSTM(object):
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
 
-        def stepfn(t, long_sequence_is_long, x, dummy_h, dummy_c, h, c, **popstats):
+        summary = T.dot(x, p.Wsummarize).mean(axis=0) if args.summarize else 0
+
+        output_names = "h c atilde btilde".split()
+        for key in "abcp":
+            for stat in "mean var".split():
+                output_names.append("%s_%s" % (key, stat))
+
+        def stepfn(t, long_sequence_is_long, x, dummy_h, dummy_c, h, c):
+            # population statistics are sequences, but we use them
+            # like a non-sequence and index it ourselves. this allows
+            # us to generalize to longer sequences, in which case we
+            # repeat the last element.
             popstats_by_key = dict()
-            for key in "abc":
+            for key in "abcp":
                 popstats_by_key[key] = dict()
                 for stat in "mean var".split():
                     if not args.baseline and args.use_population_statistics:
@@ -196,62 +239,60 @@ class LSTM(object):
                         popstat = None
                     popstats_by_key[key][stat] = popstat
 
-            atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
-            a_normal, a_mean, a_var = bn(atilde, p.a_gammas, 0, args, **popstats_by_key["a"])
-            b_normal, b_mean, b_var = bn(btilde, p.b_gammas, 0, args, **popstats_by_key["b"])
-            ab = a_normal + b_normal + p.ab_betas
+            atilde, btilde, ptilde = T.dot(h, p.Wa), T.dot(x, p.Wx), T.dot(c, p.Wp)
+            a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
+            b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
+            p_normal, p_mean, p_var = self.bn_p.construct_graph(ptilde, baseline=args.baseline, **popstats_by_key["p"])
+
+            # peepholes go only to gates, not to g
+            p_normal = T.concatenate([T.zeros((p_normal.shape[0], self.num_hidden)), p_normal], axis=1)
+            if not self.peepholes:
+                # if we leave p_normal out of the graph, blocks will
+                # still consider p.Wp a parameter as it is used in
+                # scan outputs, but since it's not part of the graph
+                # computing the cost T.grad will complain
+                p_normal *= 0
+
+            ab = a_normal + b_normal + p_normal
+
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
+
             c = dummy_c + f * c + i * g
-            c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, args, **popstats_by_key["c"])
+
+            c_normal, c_mean, c_var = self.bn_c.construct_graph(c, baseline=args.baseline, **popstats_by_key["c"])
+
             h = dummy_h + o * self.activation(c_normal)
-            return locals()
 
-        sequences = dict(t=t, x=x, long_sequence_is_long=long_sequence_is_long,
-                         dummy_h=dummy_states["h"],
-                         dummy_c=dummy_states["c"])
-        outputs_info = dict(h=T.repeat(p.h0[None, :], batch_size, axis=0),
-                            c=T.repeat(p.c0[None, :], batch_size, axis=0),
-                            atilde=None, btilde=None)
-        non_sequences = dict()
+            return [locals()[name] for name in output_names]
 
-        if not args.baseline:
-            for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-                for stat, init in zip("mean var".split(), [0, 1]):
-                    name = "%s_%s" % (key, stat)
+        sequences = [t, long_sequence_is_long, x, dummy_states["h"], dummy_states["c"]]
+        outputs_info = [
+            T.repeat(p.h0[None, :], batch_size, axis=0) + summary,
+            T.repeat(p.c0[None, :], batch_size, axis=0),
+        ]
+        outputs_info.extend([None] * (len(output_names) - len(outputs_info)))
 
-                    if args.use_population_statistics:
-                        # population statistics is a sequence, but we pass it in
-                        # as a non-sequence and index it ourselves. this allows us
-                        # to generalize to longer sequences, in which case we
-                        # repeat the last element.
-                        non_sequences[name] = popstats[name]
-                    else:
-                        # provide batch statistic as an output so that we
-                        # can estimate population statistics from them.
-                        outputs_info[name] = None
-
-        outputs, updates = util.scan(
+        outputs, updates = theano.scan(
             stepfn,
             sequences=sequences,
-            outputs_info=outputs_info,
-            non_sequences=non_sequences)
+            outputs_info=outputs_info)
+        outputs = dict(zip(output_names, outputs))
 
-        if not args.baseline:
-            if not args.use_population_statistics:
-                # prepare population statistic estimation
-                popstats = dict()
-                alpha = 0.005
-                for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
-                    for stat, init in zip("mean var".split(), [0, 1]):
-                        name = "%s_%s" % (key, stat)
-                        popstats[name] = theano.shared(
-                            init + np.zeros((length, size,),
-                                            dtype=theano.config.floatX),
-                            name=name)
-                        popstats[name].tag.estimand = outputs[name]
-                        updates[popstats[name]] = (alpha * outputs[name] +
-                                                   (1 - alpha) * popstats[name])
+        if not args.baseline and not args.use_population_statistics:
+            # prepare population statistic estimation
+            popstats = dict()
+            alpha = 0.05
+            for key, size in zip("abcp", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden, 3*args.num_hidden]):
+                for stat, init in zip("mean var".split(), [0, 1]):
+                    name = "%s_%s" % (key, stat)
+                    popstats[name] = theano.shared(
+                        init + np.zeros((length, size,),
+                                        dtype=theano.config.floatX),
+                        name=name)
+                    popstats[name].tag.estimand = outputs[name]
+                    updates[popstats[name]] = (alpha * outputs[name] +
+                                               (1 - alpha) * popstats[name])
 
         return outputs, updates, dummy_states, popstats
 
@@ -295,6 +336,8 @@ def construct_graphs(args, nclasses):
         args.initializer = orthogonal
     elif args.initialization == "uniform":
         args.initializer = lambda shape: uniform(shape, 0.01)
+    elif args.initialization == "glorot":
+        args.initializer = glorot
 
     Wy = theano.shared(args.initializer((args.num_hidden, nclasses)), name="Wy")
     by = theano.shared(np.zeros((nclasses,), dtype=theano.config.floatX), name="by")
@@ -344,12 +387,14 @@ if __name__ == "__main__":
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--lstm", action="store_true")
-    parser.add_argument("--initialization", choices="identity orthogonal uniform".split(), default="identity")
+    parser.add_argument("--initialization", choices="identity glorot orthogonal uniform".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
+    parser.add_argument("--peepholes", action="store_true")
     parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
+    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
