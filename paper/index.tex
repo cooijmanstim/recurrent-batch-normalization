@@ -244,12 +244,16 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 
 \begin{table}
-
+\center
 \begin{tabular}{c|c|c}
-   & UnPermuted & Permuted\\
+  \hline
+  & UnPermuted & Permuted\\
+  \hline
+  FIXME & & \\
+  ... & &\\
   \hline
   LSTM & 98.8 & 90.1\\
-  BN-LSTM & 99.0 & 95.1\\
+  BN-LSTM & \textbf{99.0} & \textbf{95.1}\\
 \end{tabular}
 \caption{Accuracy obtained on the test set for the pixel by pixel MNIST classification tasks}
 \label{tab:seqmnist_test}
