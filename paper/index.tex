@@ -233,32 +233,55 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 \subsection{Sequential MNIST}
 
+
 \begin{figure}
 \center
-\includegraphics[width=7cm]{figures/unpermuted_valid.pdf}
-\includegraphics[width=7cm]{figures/permuted_valid.pdf}
+\includegraphics[width=6.7cm]{figures/unpermuted_valid.pdf}
+\includegraphics[width=6.7cm]{figures/permuted_valid.pdf}
 \caption{Accuracy on the validation set for the pixel by pixel MNIST classification tasks. The batch-normalized LSTM is able to converge faster relatively to a baseline LSTM.
   Batch-normalized  LSTM also shows some improve generalization on the permuted sequential MNIST that require to preserve long-term memory information.}
 \label{fig:seqmnist_valid}
 \end{figure}
 
 
+We evaluate recurrent batch normalization on a modified version of the MNIST dataset, suggested by~\cite{le2015simple}.
+Recurrent models are fed MNIST pixels sequentially and have to output at the end of the sequence the corresponding MNIST label.
+We consider two sequentall tasks, MNIST and $p$-(ermuted)MNIST, with different pixel ordering, MNIST considers the pixels from left to right, while $p$-MNIST uses and random ordering of the pixels.
+As model, we consider a LSTM using $100$ hidden units. A softmax classifier
+is applied on the final hidden representation.
+LSTM relies on orthogonal initialization for the weight matrix, except for the hidden-to-hidden weight matrix that used identity initiliazation, as we observe better generalization performance with this
+initiliaziation for this tasks.
+The model is trained using RMSProp~\cite{Tieleman2012} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
+
 \begin{table}
 \center
+\small
 \begin{tabular}{c|c|c}
-  \hline
   & UnPermuted & Permuted\\
   \hline
-  FIXME & & \\
-  ... & &\\
+  TANH-RNN~\cite{le2015simple} & 35.0 & 35.0\\
+  $i$RNN~\cite{le2015simple} & 97.0 & 82.0\\
+  $u$RNN~\cite{urnn} & 95.1 & 91.4\\
+  $s$TANH-RNN~\cite{zhang2016architectural} & 98.1 & 94.0\\
   \hline
-  LSTM & 98.8 & 90.1\\
-  BN-LSTM & \textbf{99.0} & \textbf{95.1}\\
+  LSTM & 98.9 & 90.2\\
+  BN-LSTM & \textbf{99.0} & \textbf{95.4}\\
 \end{tabular}
 \caption{Accuracy obtained on the test set for the pixel by pixel MNIST classification tasks}
 \label{tab:seqmnist_test}
 
 \end{table}
+
+
+
+Figure~\ref{fig:seqmnist_valid} reports the validation accuracy throught the training of both LSTM and batch-normalized LSTM (BN-LSTM). Figure~\ref{fig:seqmnist_valid} clearly shows recurrent batch normalization eases the model optimization, as batch-normalized LSTM converges faster than the baseline LSTM on both tasks.
+In addition, we observe that batch-normalized LSTM obtain a significant generalization improvement on $p$-MNIST. It has been highlighted in~\cite{urnn}
+that $p$-MNIST creates many longer term dependencies across pixels than in
+the original pixel ordering, where a lot of structure is local. A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this tasks. Results show by using recurrent batch-normalization, we can learn a LSTM that better characterize those long-term dependencies.
+
+
+
+Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for the LSTM and BN-LSTM models. Recurrent batch normalization leds to better test score, especially for $p$-MNIST  where models have to leverage long-term temporal depencies. In addition, Table~\ref{tab:seqmnist_test} shows that our batch normalized LSTM achieves state-of-art on both MNIST and pMNIST.
 
 \subsection{Character-level Penn Treebank}
 
@@ -323,5 +346,6 @@ We thank Çağlar Gülçehre for sharing his implementation of Attentive Reader 
 and David Krueger, Ishmael Belghazi and Saizheng Zhang for helpful discussions.
 
 \bibliography{index}
+\bibliographystyle{nips2015}
 
 \end{document}
