@@ -91,13 +91,12 @@ class DumpVariables(SimpleExtension):
         super(DumpVariables, self).__init__(**kwargs)
         self.save_path = save_path
         self.variables = variables
-        self.function = theano.function(inputs, variables)
+        self.function = theano.function(inputs, variables, on_unused_input="warn")
         self.batch = batch
         self.i = 0
 
     def do(self, which_callback, *args):
-        if which_callback == "before_epoch":
-            values = dict((variable.name, np.asarray(value)) for variable, value in
-                          zip(self.variables, self.function(**self.batch)))
-            secure_dump(values, "%s_%i.pkl" % (self.save_path, self.i))
-            self.i += 1
+        values = dict((variable.name, np.asarray(value)) for variable, value in
+                      zip(self.variables, self.function(**self.batch)))
+        secure_dump(values, "%s_%i.pkl" % (self.save_path, self.i))
+        self.i += 1
