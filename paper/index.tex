@@ -62,7 +62,7 @@ Recently, a related technique called weight normalization~\cite{salimans2016weig
 Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$,
 
 \begin{align}
-\vect{h}_t = f(
+\vect{h}_t = \mathrm{tanh}(
   \mat{W}_h \vect{h}_{t-1} +
   \mat{W}_x \vect{x}_t +
   \vect{b})
@@ -76,18 +76,8 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
 
 Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
-A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
-This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
-However, unrolled recurrent networks differ from true feedforward networks in several important respects:
-\begin{itemize}
-\item The parameters are shared across layers.
-\item The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
-\item There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-\item The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
-\end{itemize}
-
-All of these complicate the application of batch normalization in recurrent neural networks.
-Nevertheless, we believe that batch normalization can help with some of the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients~\cite{somebody} and the difficulty of learning long-term dependencies~\cite{somebody else}.
+[optimization problems]
+ the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients~\cite{somebody} and the difficulty of learning long-term dependencies~\cite{somebody else}.
 
 There exist a number of variants of the basic recurrent neural network given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
 
@@ -140,7 +130,7 @@ where $h \in \reals$ is the (pre)activation to be normalized, $\gamma \in \reals
 
 $\mathcal{H}$ is distributed according to $p(\mathcal{H}|\mathcal{X}) p(\mathcal{X})$ with $p(\mathcal{X})$ being the data distribution.
 At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(\mathcal{H})$ are estimated by the sample mean and sample variance of the current minibatch.
-This allows for backpropation through the statistics, preserving the convergence properties of stochastic gradient descent.
+This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
 For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
@@ -149,8 +139,48 @@ Batch normalizing some hidden layer's activation ensures that its mean and varia
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
+\section{Recurrent batch normalization}
 
-\section{Batch-normalized LSTM}
+A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
+This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
+However, unrolled recurrent networks differ from true feedforward networks in several important respects that complicate the application of batch normalization.
+
+\begin{itemize}
+\item
+The parameters in an unrolled recurrent network are shared across layers.
+This suggests that the statistics used for normalization should be shared as well.
+However, we have found that estimating the statistics independently at each timestep works best.
+With batch normalization, the activations rapidly converge to a stationary distribution (cf. a figure), so independent estimation does not hurt performance.
+Indeed, we find that sharing statistics does hurt performance, as the distribution of activations during the first few timesteps is very different from the stationary distribution.
+\\ \item
+The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
+This poses a problem if we want to estimate the population statistics for different timesteps independently.
+However, thanks to the stationarity of the activation distribution (cf. that figure) we can use the estimates of earlier timesteps for later timesteps.
+For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
+When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
+
+[there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
+\\ \item
+There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
+We find that we need to normalize these terms separately before adding them up.
+This gives the model better control over the relative contribution of the terms.
+\\ \item
+The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
+This problem is exacerbated in unnatural data such as MNIST and various pathological tasks, where some features are constant across the data.
+In the sequential MNIST task in particular, the variance is typically exactly zero for the first hundred or so time steps, as the upper pixels are almost always black.
+Normalizing these zero-variance activations involves division by a very small number at many timesteps, which causes the gradient to explode.
+We work around this by injecting noise into the initial hidden states.
+Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
+[but is that an artifact of classification at the end?]
+\\ \item
+Unrolled recurrent networks are typically much deeper than feedforward networks.
+Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
+This avoids saturating the nonlinearities and enables better flow of gradients.
+Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
+[yet explode in LSTM...]
+\end{itemize}
+
+\subsection{Batch-normalized LSTM}
 
 We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM transition as follows:
 
@@ -183,6 +213,8 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
 To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on a single parameter vector $\vect{b}$ to account for both biases.
+
+In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
 
 During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
 During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
