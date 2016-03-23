@@ -294,7 +294,22 @@ However, we show that batch normalizing our best baseline enables it to train fa
 
 \subsection{TIMIT}
 
-\subsection{Memory Networks}
+[do we include this? I'm not opposed to it but not sure what to say]
+
+\subsection{Teaching Machines to Read and Comprehend}
+
+To demonstrate the generality and practical applicability of our
+reparameterization, we take an implementation of the Attentive Reader
+model~\cite{attentivereader} and simply replace the LSTM with our
+BN-LSTM.
+Additionally we try a variant where we also introduce batch
+normalization into the attention computations, normalizing each term
+going into the tanh nonlinearities.
+Without any tweaking, we gain dramatic acceleration of training.
+
+[Caglar will write a blurb on how the subset of data is selected]
+
+[I will show training curves]
 
 \section{Conclusion}
 
