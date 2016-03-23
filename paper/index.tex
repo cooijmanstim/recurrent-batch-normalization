@@ -97,33 +97,26 @@ We will focus on LSTM, with recurrent transition given by
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}_t \\
-\vect{i}_t \\
-\vect{o}_t \\
-\vect{g}_t
+\tilde{\vect{f}}_t \\
+\tilde{\vect{i}}_t \\
+\tilde{\vect{o}}_t \\
+\tilde{\vect{g}}_t
 \end{array}\right)
  &=
-\left(\begin{array}{ccc}
-\sigma \\
-\sigma \\
-\sigma \\
-\tanh
-\end{array}\right)
-\left(
  \mat{W}_h \vect{h}_{t-1} +
  \mat{W}_x \vect{x}_t +
  \vect{b}
-\right) \\
-\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
-              \vect{i}_t \ewprod \vect{g}_t \\
-\vect{h}_t &= \vect{o}_t \ewprod \tanh(\vect{c}_t)
+\\
+\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t)
 \end{align}
 
 where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and the initial states $\vect{c}_0, \vect{h}_0 \in \reals^{d_h}$ are model parameters.
 The $\ewprod$ operator denotes the elementwise product.
 
 Intuitively, LSTM improves on the basic RNN in two ways.
-First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
+First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow more easily.
 Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
 
 \subsection{Batch normalization}
@@ -145,7 +138,7 @@ At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
-For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
+For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{\gamma}, \vect{\beta})$ the elementwise normalization of activation vector $\vect{x}$.
 
 Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
@@ -198,33 +191,26 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}_t \\
-\vect{i}_t \\
-\vect{o}_t \\
-\vect{g}_t
+\tilde{\vect{f}}_t \\
+\tilde{\vect{i}}_t \\
+\tilde{\vect{o}}_t \\
+\tilde{\vect{g}}_t
 \end{array}\right)
  &=
-\left(\begin{array}{ccc}
-\sigma \\
-\sigma \\
-\sigma \\
-\tanh
-\end{array}\right)
-\left(
  \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \vect{\gamma}_h, \vect{\beta}_h) +
  \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \vect{\gamma}_x, \vect{\beta}_x) +
  \vect{b}
-\right) \\
-\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
-              \vect{i}_t \ewprod \vect{g}_t \\
-\vect{h}_t &= \vect{o}_t \ewprod \tanh(
+\\
+\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
  \mathrm{BN} (\vect{c}_t; \vect{\gamma}_c, \vect{\beta}_c)
 )
 \end{align}
 
 Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
-To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on a single parameter vector $\vect{b}$ to account for both biases.
+To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 
 In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
 
