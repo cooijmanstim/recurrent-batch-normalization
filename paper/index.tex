@@ -176,38 +176,41 @@ Deep neural networks trained with batch normalization converge significantly fas
 \section{Recurrent batch normalization}
 \label{sec:recurrent-batch-normalization}
 
+This section introduces a reparametrization of LSTM that takes advantage
+of Batch Normalization. Contrary to previous works~\cite{cesar, baidu}, we leverage of batch normalization in both input-to-hidden and hidden-to-hidden transformation.
 
-\subsection{Batch-normalized LSTM}
 
-We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM transition as follows:
+We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
 
-\begin{align}
+\begin{eqnarray}
 \left(\begin{array}{ccc}
 \tilde{\vect{f}}_t \\
 \tilde{\vect{i}}_t \\
 \tilde{\vect{o}}_t \\
 \tilde{\vect{g}}_t
 \end{array}\right)
- &=
+ &=&
  \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
  \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
  \vect{b}
 \\
-\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+\vect{c}_t &=& \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
               \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
-\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
+\vect{h}_t &=& \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
  \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
 )
-\end{align}
+\end{eqnarray}
 
 Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
 To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
-
-In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
+In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
 During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
 During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
+
+%% FIXME develop a little bit
+%% Speak about the population statistics
 
 
 \subsection{Population Statistics}
