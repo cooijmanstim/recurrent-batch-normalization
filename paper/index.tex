@@ -136,21 +136,18 @@ Batch normalization is a simple reparameterization applied to neural network pre
 The batch normalizing transform is as follows:
 
 \begin{align}
-\mathrm{BN}(h; \gamma, \beta) =
+\mathrm{BN}(\vect{h}; \gamma, \beta) =
   \beta + \gamma
-  \frac{h -   \widehat{\mathrm{Mean}}(\mathcal{H})}
-       {\sqrt{\widehat{\mathrm{Var }}(\mathcal{H}) + \epsilon}}
+  \frac{\vect{h} -   \widehat{\mathrm{Mean}}(\mathcal{H})}
+       {       \sqrt{\widehat{\mathrm{Var }}(\mathcal{H}) + \epsilon}}
 \end{align}
 
-where $h \in \reals$ is the (pre)activation to be normalized, $\gamma \in \reals, \beta \in \reals$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
+where $\vect{h} \in \reals^d$ is the vector of (pre)activations to be normalized, $\gamma \in \reals^d, \beta \in \reals^d$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
 
 $\mathcal{H}$ is distributed according to $p(\mathcal{H}|\mathcal{X}) p(\mathcal{X})$ with $p(\mathcal{X})$ being the data distribution.
 At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(\mathcal{H})$ are estimated by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
-
-For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{\gamma}, \vect{\beta})$ the elementwise normalization of activation vector $\vect{x}$.
-[in this case $\gamma$ and $\beta$ are vectors too but apparently $\gamma$ and the bold $\mathrm{\gamma}$ look identical]
 
 Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
@@ -211,20 +208,20 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 \tilde{\vect{g}}_t
 \end{array}\right)
  &=
- \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \vect{\gamma}_h, \vect{\beta}_h) +
- \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \vect{\gamma}_x, \vect{\beta}_x) +
+ \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
+ \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
  \vect{b}
 \\
 \vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
               \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
 \vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
- \mathrm{BN} (\vect{c}_t; \vect{\gamma}_c, \vect{\beta}_c)
+ \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
 )
 \end{align}
 
 Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
-This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
-To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
+This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
+To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 
 In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
 
