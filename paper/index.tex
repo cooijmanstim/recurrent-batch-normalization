@@ -261,6 +261,37 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 \subsection{Character-level Penn Treebank}
 
+We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\cite{penntreebank}.
+We follow the setup of~\cite{krueger}, dividing the training set into nonoverlapping subsequences of length 50.
+Our baseline is an LSTM with 1000 units.
+We use stochastic gradient descent on minibatches of size 100,
+with gradient clipping at 1.0 and step rule determined by RMSProp~\cite{rmsprop}
+with learning rate 0.001 and momentum 0.9.
+We use orthogonal initialization for all weight matrices.
+The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
+
+We were unable to reproduce the baseline reported in~\cite{krueger} and so are unable to compare directly to their results.
+However, we show that batch normalizing our best baseline enables it to train faster and generalize better.
+
+%\begin{figure}
+%\center
+%\includegraphics[width=7cm]{figures/ptb_valid.pdf}
+%\caption{Bits-per-character on the validation set for Penn Treebank during training.}
+%\label{fig:ptb_valid}
+%\end{figure}
+%
+%\begin{table}
+%\center
+%\begin{tabular}{c|c}
+%  \hline
+%  LSTM & BN-LSTM\\
+%  \hline
+%  NaN & NaN\\
+%  \textbf{NaN} & \textbf{NaN}\\
+%\end{tabular}
+%\caption{Bits-per-character on the Penn Treebank test string.}
+%\label{tab:ptb_test}
+
 \subsection{TIMIT}
 
 \subsection{Memory Networks}
