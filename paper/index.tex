@@ -99,12 +99,11 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
 
 RNNs are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
-[optimization problems]
- the notorious training issues associated with RNNs, namely vanishing/exploding gradients and the difficulty of learning long-term dependencies~\cite{bengiolongterm}.
+Being dynamical systems, RNNs can exhibit chaotic behavior, and indeed controlling their dynamics is an area of active research.
+Training RNNs by gradient descent is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient.
+This leads to the much-studied problem of vanishing and exploding gradients~\cite{bengiolongterm}~\cite{pascanudifficulty}.
 
-There exist a number of variants of the basic RNN given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
-
-We will focus on LSTM, with recurrent transition given by
+There exist a number of variants of the basic RNN given above, some specifically designed to address the problem of vanishing and exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.  We will focus on LSTM, with recurrent transition given by
 
 \begin{align}
 \left(\begin{array}{ccc}
@@ -129,6 +128,7 @@ The $\ewprod$ operator denotes the elementwise product.
 Intuitively, LSTM improves on the basic RNN in two ways.
 First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow more easily.
 Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
+With these gates, the model can control what to forget and what to remember.
 
 \subsection{Batch normalization}
 
