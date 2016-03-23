@@ -70,10 +70,10 @@ Indeed, normalizing horizontally -- where RNNs are deepest and would most benefi
 
 Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
 [also normprop]
-However to our knowledge none of these schemes have yet been transferred to recurrent neural networks.
+However to our knowledge none of these schemes have yet been transferred to RNNs.
 
-In this paper, we demonstrate how batch normalization can be used in recurrent neural networks to speed up optimization and improve generalization.
-Section~\ref{sec:prerequisites} introduces recurrent neural networks and batch normalization in detail.
+In this paper, we demonstrate how batch normalization can be used in RNNs to speed up optimization and improve generalization.
+Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
 In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
 We show in Section~\ref{sec:experiments} our evaluations of the proposed reparameterization on a variety of tasks.
 
@@ -97,12 +97,12 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
   and the initial state $\vect{h}_0 \in \reals^{d_h}$
   are model parameters.
 
-Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
+RNNs are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
 [optimization problems]
- the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients and the difficulty of learning long-term dependencies~\cite{bengiolongterm}.
+ the notorious training issues associated with RNNs, namely vanishing/exploding gradients and the difficulty of learning long-term dependencies~\cite{bengiolongterm}.
 
-There exist a number of variants of the basic recurrent neural network given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
+There exist a number of variants of the basic RNN given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
 
 We will focus on LSTM, with recurrent transition given by
 
@@ -159,13 +159,13 @@ Deep neural networks trained with batch normalization converge significantly fas
 \section{Recurrent batch normalization}
 \label{sec:recurrent-batch-normalization}
 
-A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
+A RNN can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
-However, unrolled recurrent networks differ from true feedforward networks in several important respects that complicate the application of batch normalization.
+However, unrolled RNNs differ from true feedforward networks in several important respects that complicate the application of batch normalization.
 
 \begin{itemize}
 \item
-The parameters in an unrolled recurrent network are shared across layers.
+The parameters in an unrolled RNN are shared across layers.
 This suggests that the statistics used for normalization should be shared as well.
 However, we have found that estimating the statistics independently at each timestep works best.
 With batch normalization, the activations rapidly converge to a stationary distribution (cf. a figure), so independent estimation does not hurt performance.
@@ -191,7 +191,7 @@ We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 [but is that an artifact of classification at the end?]
 \\ \item
-Unrolled recurrent networks are typically much deeper than feedforward networks.
+Unrolled RNNs are usually much deeper than typical feedforward networks.
 Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
 This avoids saturating the nonlinearities and enables better flow of gradients.
 Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
