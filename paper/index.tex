@@ -247,10 +247,11 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 \center
 \begin{tabular}{c|c|c}
   \hline
-  & UnPermuted & Permuted\\
+  & MNIST & \textit{p}MNIST\\
   \hline
-  FIXME & & \\
-  ... & &\\
+  \textit{i}RNN & 97.0 & 82.0\\
+  \textit{u}RNN & 95.1 & 88.0\\
+  \textit{s}TANH & 98.1 & 94.0\\
   \hline
   LSTM & 98.8 & 90.1\\
   BN-LSTM & \textbf{99.0} & \textbf{95.1}\\
@@ -267,5 +268,6 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 \subsection{Memory Networks}
 
 \section{Conclusion}
+
 
 \end{document}
