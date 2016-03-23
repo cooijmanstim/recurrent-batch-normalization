@@ -54,21 +54,31 @@ Aaron
 
 \section{Introduction}
 
-[Given ill-conditioning, acceptable optimization can still be obtained by better optimization algorithms, such as
-Hessian-Free~\cite{hessianfree} or the various approximations to natural gradient proposed in~\cite{ollivier} and~\cite{KFAC}.
+Training deep neural networks by gradient descent is hard due in large part to pathological curvature in the objective function.
+Approaches to alleviating this problem divide naturally into two categories: smarter optimization algorithms such as
+Hessian-Free~\cite{hessianfree} and various approximations to natural gradient~\cite{amari} proposed in~\cite{ollivier} and~\cite{KFAC},
+and model reparameterizations~\cite{efficientbackprop}~\cite{raiko}~\cite{naturalneuralnetworks}.
 
-Alternatively, the conditioning problem can also be addressed through model reparameterizations.
-\cite{efficientbackprop}, \cite{raiko}, \cite{naturalneuralnetworks}.
-batch normalization is one of these.]
+Batch normalization~\cite{batchnorm} is a recently proposed reparameterization that [actually works].
+It involves normalizing unit preactivations in order to make their distributions easier to control.
+This greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
 
-Batch normalization~\cite{batchnorm} greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
+However, applying batch normalization in recurrent neural networks (RNNs) has proven to be challenging.
+It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN~\cite{cesar}~\cite{baidu}, but not ``horizontally'' between timesteps.
+Indeed, normalizing horizontally -- where RNNs are deepest and would most benefit from the reparameterization -- was thought to be unhelpful until now.
 
-However, applying batch normalization in recurrent neural networks has proven to be challenging.
-In \cite{baidu} batch normalization is applied in a stack of recurrent neural networks, but only to the input terms and not to the recurrent terms.
-\cite{cesar}
 Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
+[also normprop]
+However to our knowledge none of these schemes have yet been transferred to recurrent neural networks.
+
+In this paper, we propose a reparameterization of LSTM (an RNN architecture) that brings the benefits of batch normalization to recurrent neural networks.
+Section~\ref{sec:prerequisites} introduces recurrent neural networks and batch normalization in detail.
+In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
+We show in Section~\ref{sec:experiments} our evaluations of the proposed reparameterization on a variety of tasks.
 
 \section{Prerequisites}
+\label{sec:prerequisites}
+
 \subsection{Recurrent neural networks}
 
 Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$,
@@ -145,6 +155,7 @@ Applying this on every layer effectively decouples each layer's parameters from 
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
 \section{Recurrent batch normalization}
+\label{sec:recurrent-batch-normalization}
 
 A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
@@ -218,6 +229,7 @@ During training we estimate the statistics needed for batch normalization across
 During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
 
 \section{Experiments}
+\label{sec:experiments}
 
 \subsection{Sequential MNIST}
 
