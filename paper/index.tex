@@ -138,14 +138,13 @@ The batch normalizing transform is as follows:
 \begin{align}
 \mathrm{BN}(\vect{h}; \gamma, \beta) =
   \beta + \gamma
-  \frac{\vect{h} -   \widehat{\mathrm{Mean}}(\mathcal{H})}
-       {       \sqrt{\widehat{\mathrm{Var }}(\mathcal{H}) + \epsilon}}
+  \frac{\vect{h} -   \widehat{\mathbb{E}}(\vect{h})}
+       {       \sqrt{\widehat{\mathrm{Var }}(\vect{h}) + \epsilon}}
 \end{align}
 
 where $\vect{h} \in \reals^d$ is the vector of (pre)activations to be normalized, $\gamma \in \reals^d, \beta \in \reals^d$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
 
-$\mathcal{H}$ is distributed according to $p(\mathcal{H}|\mathcal{X}) p(\mathcal{X})$ with $p(\mathcal{X})$ being the data distribution.
-At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(\mathcal{H})$ are estimated by the sample mean and sample variance of the current minibatch.
+At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{h})$ are estimated by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
