@@ -132,7 +132,7 @@ With these gates, the model can control what to forget and what to remember.
 
 \subsection{Batch normalization}
 
-Batch normalization is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
+Batch normalization~\cite{batchnorm} is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
 The batch normalizing transform is as follows:
 
 \begin{align}
@@ -149,7 +149,7 @@ This allows for backpropagation through the statistics, preserving the convergen
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
 Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
-Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
+Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
 \section{Recurrent batch normalization}
