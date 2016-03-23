@@ -178,6 +178,7 @@ For our experiments we estimate the population statistics separately for each ti
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
 [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
+[additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
 \\ \item
 There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
 We find that we need to normalize these terms separately before adding them up.
