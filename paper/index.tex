@@ -42,6 +42,8 @@ Aaron
 \newcommand{\reals}{\mathbb{R}}
 \newcommand{\given}{\vert}
 
+\bibliographystyle{plain}
+
 \begin{document}
 
 \maketitle
@@ -56,15 +58,15 @@ Aaron
 Hessian-Free~\cite{hessianfree} or the various approximations to natural gradient proposed in~\cite{ollivier} and~\cite{KFAC}.
 
 Alternatively, the conditioning problem can also be addressed through model reparameterizations.
-\cite{lecun}, \cite{raiko}, \cite{pascanu}, \cite{desjardins}.
+\cite{efficientbackprop}, \cite{raiko}, \cite{naturalneuralnetworks}.
 batch normalization is one of these.]
 
-Batch normalization~\cite{ioffe2015batch} greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
+Batch normalization~\cite{batchnorm} greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
 
 However, applying batch normalization in recurrent neural networks has proven to be challenging.
-In \cite{Baidu} batch normalization is applied in a stack of recurrent neural networks, but only to the input terms and not to the recurrent terms.
-\cite{Cesar} 
-Recently, a related technique called weight normalization~\cite{salimans2016weight} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
+In \cite{baidu} batch normalization is applied in a stack of recurrent neural networks, but only to the input terms and not to the recurrent terms.
+\cite{cesar}
+Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
 
 \section{Prerequisites}
 \subsection{Recurrent neural networks}
@@ -87,7 +89,7 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
 Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
 [optimization problems]
- the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients~\cite{somebody} and the difficulty of learning long-term dependencies~\cite{somebody else}.
+ the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients and the difficulty of learning long-term dependencies~\cite{bengiolongterm}.
 
 There exist a number of variants of the basic recurrent neural network given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
 
@@ -269,5 +271,7 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 \section{Conclusion}
 
+\bibliography{index}
+\bibliographystyle{nips2015}
 
 \end{document}
