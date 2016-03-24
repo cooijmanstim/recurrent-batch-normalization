@@ -77,21 +77,36 @@ class PTB(fuel.datasets.Dataset):
 
     def __init__(self, which_set, length, overlapping=False):
         assert not overlapping
+        self.which_set = which_set
         self.length = length
         self.overlapping = overlapping
         self.data = get_data(which_set)
-        # reshape to nonoverlapping examples (drops last ragged batch)
         self.num_examples = int(len(self.data) / self.length)
-        self.data = (self.data
-                     [:self.num_examples * self.length]
-                     .reshape((self.num_examples, self.length, self.data.shape[1])))
+        if self.which_set == "train":
+            # -1 so we have one self.length worth of room for augmentation
+            self.num_examples -= 1
         super(PTB, self).__init__()
 
-    def get_data(self, state=None, request=None):
+    def open(self):
+        offset = 0
+        if self.which_set == "train":
+            # choose an offset to get some data augmentation by not always chopping
+            # the examples at the same point.
+            # +1 to be consistent with self.num_examples.
+            offset = 1 + np.random.randint(self.length)
+        # none of this should copy
+        data = self.data[offset:]
+        # reshape to nonoverlapping examples
+        data = (self.data[:self.num_examples * self.length]
+                .reshape((self.num_examples, self.length, self.data.shape[1])))
+        # return the data so we will get it as the "state" argument to get_data
+        return data
+
+    def get_data(self, state, request):
         if isinstance(request, (tuple, list)):
             request = np.array(request, dtype=np.int64)
-            return (self.data.take(request, 0),)
-        return (self.data[request],)
+            return (state.take(request, 0),)
+        return (state[request],)
 
 def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
     dataset = PTB(which_set, length=length, overlapping=overlapping)
