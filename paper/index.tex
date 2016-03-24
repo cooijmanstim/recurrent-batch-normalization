@@ -133,7 +133,7 @@ LSTM has an  additional memory \emph{cell} state $\vect{c}_t$ whose update is ne
 allow the gradient to flow more easily through time.
 In addition, unlike to the RNN which overwrites its content at each time-step,
 an LSTM unit is able to decide whether to keep the existing memory via the introduced gates $\vect{f}_t$, $\vect{i}_t$.
-The gate $\vect{o}_t$ defines how much of the memory $\vect{c}_t$ will be ``pass'' to the next timeset.
+The gate $\vect{o}_t$ defines how much of the memory $\vect{c}_t$ will be ``pass'' to the next timestep.
 %%  if the LSTM unit detects an important feature from an input sequence at early stage, it
 %% easily carries this information (the existence of the feature) over a long distance, hence, capturing
 %% potential long-distance dependencies.
@@ -144,7 +144,16 @@ With these gates, the model can control what to forget and what to remember.
 
 \subsection{Batch normalization}
 
-Batch normalization~\cite{batchnorm} is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
+%% Internal Covariate Shift
+In deep neural network, an given layer $l$ receives input samples from a distribution that is defined by the layers below $l$.
+As we update the network parameters, this distribution can vary during the course of training.
+The change in the distributions of layer $l$ inputs presents a problem because the layer need to continuously adapt to the new distribution
+This distribution variation is called the Internal Covariate Shift~\cite{shimodaira2000improving}.
+Reducing the internal covariate shift should leads  faster training as upper layer does not need to adapt to the distribution change.
+
+Batch Normalization~\cite{batchnorm} proposes a network reparametrization applied to neural network preactivations that takes a step towards reducing
+internal covariate shift. Batch normalization] approximates the
+whitening by standardizing the preactivation using the statistics of the current batch..
 The batch normalizing transform is as follows:
 
 \begin{align}
