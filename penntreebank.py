@@ -1,4 +1,4 @@
-import sys, os, util
+import sys, os, util, functools
 import logging
 from collections import OrderedDict
 import numpy as np
@@ -14,7 +14,7 @@ from blocks.model import Model
 from blocks.extensions import FinishAfter, Printing, ProgressBar, Timing
 from blocks.extensions.monitoring import TrainingDataMonitoring, DataStreamMonitoring
 from blocks.extensions.stopping import FinishIfNoImprovementAfter
-from blocks.extensions.training import TrackTheBest
+from blocks.extensions.training import TrackTheBest, SharedVariableModifier
 from blocks.extensions.saveload import Checkpoint
 from extensions import DumpLog, DumpBest, PrintingTo, DumpVariables
 from blocks.main_loop import MainLoop
@@ -23,6 +23,9 @@ from blocks.roles import add_role, PARAMETER
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+def learning_rate_decayer(decay_rate, i, learning_rate):
+    return (1 - decay_rate) * learning_rate
 
 def zeros(shape):
     return np.zeros(shape, dtype=theano.config.floatX)
@@ -409,6 +412,7 @@ if __name__ == "__main__":
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--peepholes", action="store_true")
     parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
+    parser.add_argument("--learning-rate-decay", type=float, default=0.0)
     parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
@@ -425,10 +429,11 @@ if __name__ == "__main__":
     graphs, extensions, updates = construct_graphs(args, nclasses)
 
     ### optimization algorithm definition
+    learning_rate = theano.shared(np.array(args.learning_rate, dtype=theano.config.floatX))
     if args.optimizer == "rmsprop":
-        optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
+        optimizer = RMSProp(learning_rate=learning_rate, decay_rate=0.9)
     elif args.optimizer == "sgdmomentum":
-        optimizer = Momentum(learning_rate=args.learning_rate, momentum=0.99)
+        optimizer = Momentum(learning_rate=learning_rate, momentum=0.99)
     step_rule = CompositeRule([
         StepClipping(1.),
         optimizer,
@@ -439,6 +444,10 @@ if __name__ == "__main__":
     algorithm.add_updates(updates["training"])
     model = Model(graphs["training"].outputs[0])
     extensions = extensions["training"] + extensions["inference"]
+
+    extensions.append(SharedVariableModifier(
+        learning_rate,
+        functools.partial(learning_rate_decayer, args.learning_rate_decay)))
 
     # step monitor
     step_channels = []
