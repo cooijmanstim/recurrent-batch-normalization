@@ -24,7 +24,7 @@ for axes, stats in zip(axess, statss):
         # random subset of popstats
         subset = np.random.choice(popstat.shape[1], size=30, replace=False)
 
-        axis.plot(popstat[:, subset], color="k")
+        axis.plot(popstat[:, subset])
         axis.set_title(statlabels[stat])
 
 # set xlabel only on bottom subplots since x axis is shared
