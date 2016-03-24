@@ -463,8 +463,9 @@ if __name__ == "__main__":
 
     # parameter monitor
     extensions.append(DataStreamMonitoring(
-        [param.norm(2).copy(name="parameter.norm:%s" % name)
-         for name, param in model.get_parameter_dict().items()],
+        ([param.norm(2).copy(name="parameter.norm:%s" % name)
+          for name, param in model.get_parameter_dict().items()]
+         + [learning_rate.copy(name="learning_rate")]),
         data_stream=None, after_epoch=True))
 
     # performance monitor
