@@ -429,11 +429,10 @@ if __name__ == "__main__":
     graphs, extensions, updates = construct_graphs(args, nclasses)
 
     ### optimization algorithm definition
-    learning_rate = theano.shared(np.array(args.learning_rate, dtype=theano.config.floatX))
     if args.optimizer == "rmsprop":
-        optimizer = RMSProp(learning_rate=learning_rate, decay_rate=0.9)
+        optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
     elif args.optimizer == "sgdmomentum":
-        optimizer = Momentum(learning_rate=learning_rate, momentum=0.99)
+        optimizer = Momentum(learning_rate=args.learning_rate, momentum=0.99)
     step_rule = CompositeRule([
         StepClipping(1.),
         optimizer,
@@ -446,7 +445,7 @@ if __name__ == "__main__":
     extensions = extensions["training"] + extensions["inference"]
 
     extensions.append(SharedVariableModifier(
-        learning_rate,
+        optimizer.learning_rate,
         functools.partial(learning_rate_decayer, args.learning_rate_decay)))
 
     # step monitor
@@ -465,7 +464,7 @@ if __name__ == "__main__":
     extensions.append(DataStreamMonitoring(
         ([param.norm(2).copy(name="parameter.norm:%s" % name)
           for name, param in model.get_parameter_dict().items()]
-         + [learning_rate.copy(name="learning_rate")]),
+         + [optimizer.learning_rate.copy(name="learning_rate")]),
         data_stream=None, after_epoch=True))
 
     # performance monitor
