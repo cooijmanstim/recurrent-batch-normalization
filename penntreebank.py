@@ -25,7 +25,7 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 def learning_rate_decayer(decay_rate, i, learning_rate):
-    return (1 - decay_rate) * learning_rate
+    return ((1. - decay_rate) * learning_rate).astype(theano.config.floatX)
 
 def zeros(shape):
     return np.zeros(shape, dtype=theano.config.floatX)
