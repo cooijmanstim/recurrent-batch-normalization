@@ -273,7 +273,7 @@ As model, we consider a LSTM using $100$ hidden units. A softmax classifier
 is applied on the final hidden representation.
 LSTM relies on orthogonal initialization for the weight matrix, except for the hidden-to-hidden weight matrix that used identity initiliazation, as we observe better generalization performance with this
 initiliaziation for this tasks.
-The model is trained using RMSProp~\cite{Tieleman2012} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
+The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
 
 \begin{table}
 \center
