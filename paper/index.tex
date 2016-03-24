@@ -1,4 +1,5 @@
 \documentclass{article} % For LaTeX2e
+\usepackage[utf8]{inputenc}
 \usepackage{nips15submit_e,times}
 \usepackage{hyperref}
 \usepackage{graphicx}
@@ -14,7 +15,7 @@
 \usepackage{url}
 %\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
 
-\title{Normalisation aux batches des resaux neurales recurrents}
+\title{Recurrent Batch Normalization}
 
 \author{
 Me \\
@@ -49,26 +50,37 @@ Aaron
 \maketitle
 
 \begin{abstract}
-\,Ca marche!
+We propose a reparameterization of LSTM that brings the benefits of batch normalization to recurrent neural networks.
+Empirical results show faster convergence and improved generalization on classification, language modeling and speech transcription tasks.
 \end{abstract}
 
 \section{Introduction}
 
-[Given ill-conditioning, acceptable optimization can still be obtained by better optimization algorithms, such as
-Hessian-Free~\cite{hessianfree} or the various approximations to natural gradient proposed in~\cite{ollivier} and~\cite{KFAC}.
+Training deep neural networks by gradient descent is hard due in large part to pathological curvature in the objective function.
+Approaches to alleviating this problem divide naturally into two categories: smarter optimization algorithms such as
+Hessian-Free~\cite{hessianfree} and various approximations to natural gradient~\cite{amari} proposed in~\cite{ollivier} and~\cite{KFAC},
+and model reparameterizations~\cite{efficientbackprop}~\cite{raiko}~\cite{naturalneuralnetworks}.
 
-Alternatively, the conditioning problem can also be addressed through model reparameterizations.
-\cite{efficientbackprop}, \cite{raiko}, \cite{naturalneuralnetworks}.
-batch normalization is one of these.]
+Batch normalization~\cite{batchnorm} is a recently proposed reparameterization that [actually works].
+It involves normalizing unit preactivations in order to make their distributions easier to control.
+This greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
 
-Batch normalization~\cite{batchnorm} greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
+However, applying batch normalization in recurrent neural networks (RNNs) has proven to be challenging.
+It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN~\cite{cesar}~\cite{baidu}, but not ``horizontally'' between timesteps.
+Indeed, normalizing horizontally -- where RNNs are deepest and would most benefit from the reparameterization -- was thought to be unhelpful until now.
 
-However, applying batch normalization in recurrent neural networks has proven to be challenging.
-In \cite{baidu} batch normalization is applied in a stack of recurrent neural networks, but only to the input terms and not to the recurrent terms.
-\cite{cesar}
 Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
+[also normprop]
+However to our knowledge none of these schemes have yet been transferred to RNNs.
+
+In this paper, we demonstrate how batch normalization can be used in RNNs to speed up optimization and improve generalization.
+Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
+In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
+We show in Section~\ref{sec:experiments} our evaluations of the proposed reparameterization on a variety of tasks.
 
 \section{Prerequisites}
+\label{sec:prerequisites}
+
 \subsection{Recurrent neural networks}
 
 Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$,
@@ -86,80 +98,71 @@ where $\mat{W}_h \in \reals^{d_h \times d_h},
   and the initial state $\vect{h}_0 \in \reals^{d_h}$
   are model parameters.
 
-Recurrent neural networks are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
+RNNs are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
 
-[optimization problems]
- the notorious training issues associated with recurrent neural networks, namely vanishing/exploding gradients and the difficulty of learning long-term dependencies~\cite{bengiolongterm}.
+Being dynamical systems, RNNs can exhibit chaotic behavior, and indeed controlling their dynamics is an area of active research.
+Training RNNs by gradient descent is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient.
+This leads to the much-studied problem of vanishing and exploding gradients~\cite{bengiolongterm}~\cite{pascanudifficulty}.
 
-There exist a number of variants of the basic recurrent neural network given above, some specifically designed to address the problem of vanishing/exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.
-
-We will focus on LSTM, with recurrent transition given by
+There exist a number of variants of the basic RNN given above, some specifically designed to address the problem of vanishing and exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.  We will focus on LSTM, with recurrent transition given by
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}_t \\
-\vect{i}_t \\
-\vect{o}_t \\
-\vect{g}_t
+\tilde{\vect{f}}_t \\
+\tilde{\vect{i}}_t \\
+\tilde{\vect{o}}_t \\
+\tilde{\vect{g}}_t
 \end{array}\right)
  &=
-\left(\begin{array}{ccc}
-\sigma \\
-\sigma \\
-\sigma \\
-\tanh
-\end{array}\right)
-\left(
  \mat{W}_h \vect{h}_{t-1} +
  \mat{W}_x \vect{x}_t +
  \vect{b}
-\right) \\
-\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
-              \vect{i}_t \ewprod \vect{g}_t \\
-\vect{h}_t &= \vect{o}_t \ewprod \tanh(\vect{c}_t)
+\\
+\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t)
 \end{align}
 
 where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and the initial states $\vect{c}_0, \vect{h}_0 \in \reals^{d_h}$ are model parameters.
 The $\ewprod$ operator denotes the elementwise product.
 
 Intuitively, LSTM improves on the basic RNN in two ways.
-First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow backwards more easily.
+First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow more easily.
 Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
+With these gates, the model can control what to forget and what to remember.
 
 \subsection{Batch normalization}
 
-Batch normalization is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
+Batch normalization~\cite{batchnorm} is a simple reparameterization applied to neural network preactivations in order to make their distributions easier to control.
 The batch normalizing transform is as follows:
 
 \begin{align}
-\mathrm{BN}(h; \gamma, \beta) =
+\mathrm{BN}(\vect{h}; \gamma, \beta) =
   \beta + \gamma
-  \frac{h -   \widehat{\mathrm{Mean}}(\mathcal{H})}
-       {\sqrt{\widehat{\mathrm{Var }}(\mathcal{H}) + \epsilon}}
+  \frac{\vect{h} -   \widehat{\mathbb{E}}(\vect{h})}
+       {       \sqrt{\widehat{\mathrm{Var }}(\vect{h}) + \epsilon}}
 \end{align}
 
-where $h \in \reals$ is the (pre)activation to be normalized, $\gamma \in \reals, \beta \in \reals$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
+where $\vect{h} \in \reals^d$ is the vector of (pre)activations to be normalized, $\gamma \in \reals^d, \beta \in \reals^d$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
 
-$\mathcal{H}$ is distributed according to $p(\mathcal{H}|\mathcal{X}) p(\mathcal{X})$ with $p(\mathcal{X})$ being the data distribution.
-At training time, the statistics $\mathrm{Mean}(\mathcal{H})$ and $\mathrm{Var}(\mathcal{H})$ are estimated by the sample mean and sample variance of the current minibatch.
+At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{h})$ are estimated by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
 
-For notational convenience, we will denote by $\mathrm{BN}(\vect{x}; \vect{gamma}, \vect{beta})$ the elementwise normalization of activation vector $\vect{x}$.
-
 Batch normalizing some hidden layer's activation ensures that its mean and variance are determined only by the $\beta$ and $\gamma$ parameters, and not by the parameters of any layer below it.
-Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a block-diagonal Fischer information matrix, and a better-conditioned optimization problem.
+Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
 \section{Recurrent batch normalization}
+\label{sec:recurrent-batch-normalization}
 
-A recurrent neural network can be ``unrolled'' and viewed as a feedforward neural network.
+A RNN can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
-However, unrolled recurrent networks differ from true feedforward networks in several important respects that complicate the application of batch normalization.
+However, unrolled RNNs differ from true feedforward networks in several important respects that complicate the application of batch normalization.
 
 \begin{itemize}
 \item
-The parameters in an unrolled recurrent network are shared across layers.
+The parameters in an unrolled RNN are shared across layers.
 This suggests that the statistics used for normalization should be shared as well.
 However, we have found that estimating the statistics independently at each timestep works best.
 With batch normalization, the activations rapidly converge to a stationary distribution (cf. a figure), so independent estimation does not hurt performance.
@@ -172,6 +175,7 @@ For our experiments we estimate the population statistics separately for each ti
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
 [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
+[additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
 \\ \item
 There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
 We find that we need to normalize these terms separately before adding them up.
@@ -185,7 +189,7 @@ We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 [but is that an artifact of classification at the end?]
 \\ \item
-Unrolled recurrent networks are typically much deeper than feedforward networks.
+Unrolled RNNs are usually much deeper than typical feedforward networks.
 Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
 This avoids saturating the nonlinearities and enables better flow of gradients.
 Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
@@ -198,33 +202,26 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 
 \begin{align}
 \left(\begin{array}{ccc}
-\vect{f}_t \\
-\vect{i}_t \\
-\vect{o}_t \\
-\vect{g}_t
+\tilde{\vect{f}}_t \\
+\tilde{\vect{i}}_t \\
+\tilde{\vect{o}}_t \\
+\tilde{\vect{g}}_t
 \end{array}\right)
  &=
-\left(\begin{array}{ccc}
-\sigma \\
-\sigma \\
-\sigma \\
-\tanh
-\end{array}\right)
-\left(
- \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \vect{\gamma}_h, \vect{\beta}_h) +
- \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \vect{\gamma}_x, \vect{\beta}_x) +
+ \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
+ \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
  \vect{b}
-\right) \\
-\vect{c}_t &= \vect{f}_t \ewprod \vect{c}_{t-1} +
-              \vect{i}_t \ewprod \vect{g}_t \\
-\vect{h}_t &= \vect{o}_t \ewprod \tanh(
- \mathrm{BN} (\vect{c}_t; \vect{\gamma}_c, \vect{\beta}_c)
+\\
+\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
+ \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
 )
 \end{align}
 
 Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
-This allows the model to control the contribution of the two independently using $\vect{\gamma}_h$ and $\vect{\gamma}_x$.
-To avoid unnecessary redundancy we set $\vect{\beta}_h = \vect{\beta}_x = \vect{0}$, instead relying on a single parameter vector $\vect{b}$ to account for both biases.
+This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
+To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 
 In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
 
@@ -232,44 +229,121 @@ During training we estimate the statistics needed for batch normalization across
 During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
 
 \section{Experiments}
+\label{sec:experiments}
 
 \subsection{Sequential MNIST}
 
+
 \begin{figure}
 \center
-\includegraphics[width=7cm]{figures/unpermuted_valid.pdf}
-\includegraphics[width=7cm]{figures/permuted_valid.pdf}
+\includegraphics[width=6.7cm]{figures/unpermuted_valid.pdf}
+\includegraphics[width=6.7cm]{figures/permuted_valid.pdf}
 \caption{Accuracy on the validation set for the pixel by pixel MNIST classification tasks. The batch-normalized LSTM is able to converge faster relatively to a baseline LSTM.
   Batch-normalized  LSTM also shows some improve generalization on the permuted sequential MNIST that require to preserve long-term memory information.}
 \label{fig:seqmnist_valid}
 \end{figure}
 
 
+We evaluate recurrent batch normalization on a modified version of the MNIST dataset, suggested by~\cite{le2015simple}.
+Recurrent models are fed MNIST pixels sequentially and have to output at the end of the sequence the corresponding MNIST label.
+We consider two sequentall tasks, MNIST and $p$-(ermuted)MNIST, with different pixel ordering, MNIST considers the pixels from left to right, while $p$-MNIST uses and random ordering of the pixels.
+As model, we consider a LSTM using $100$ hidden units. A softmax classifier
+is applied on the final hidden representation.
+LSTM relies on orthogonal initialization for the weight matrix, except for the hidden-to-hidden weight matrix that used identity initiliazation, as we observe better generalization performance with this
+initiliaziation for this tasks.
+The model is trained using RMSProp~\cite{Tieleman2012} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
+
 \begin{table}
 \center
+\small
 \begin{tabular}{c|c|c}
+  & UnPermuted & Permuted\\
   \hline
-  & MNIST & \textit{p}MNIST\\
+  TANH-RNN~\cite{le2015simple} & 35.0 & 35.0\\
+  $i$RNN~\cite{le2015simple} & 97.0 & 82.0\\
+  $u$RNN~\cite{urnn} & 95.1 & 91.4\\
+  $s$TANH-RNN~\cite{zhang2016architectural} & 98.1 & 94.0\\
   \hline
-  \textit{i}RNN & 97.0 & 82.0\\
-  \textit{u}RNN & 95.1 & 88.0\\
-  \textit{s}TANH & 98.1 & 94.0\\
-  \hline
-  LSTM & 98.8 & 90.1\\
-  BN-LSTM & \textbf{99.0} & \textbf{95.1}\\
+  LSTM & 98.9 & 90.2\\
+  BN-LSTM & \textbf{99.0} & \textbf{95.4}\\
 \end{tabular}
 \caption{Accuracy obtained on the test set for the pixel by pixel MNIST classification tasks}
 \label{tab:seqmnist_test}
 
 \end{table}
 
+
+
+Figure~\ref{fig:seqmnist_valid} reports the validation accuracy throught the training of both LSTM and batch-normalized LSTM (BN-LSTM). Figure~\ref{fig:seqmnist_valid} clearly shows recurrent batch normalization eases the model optimization, as batch-normalized LSTM converges faster than the baseline LSTM on both tasks.
+In addition, we observe that batch-normalized LSTM obtain a significant generalization improvement on $p$-MNIST. It has been highlighted in~\cite{urnn}
+that $p$-MNIST creates many longer term dependencies across pixels than in
+the original pixel ordering, where a lot of structure is local. A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this tasks. Results show by using recurrent batch-normalization, we can learn a LSTM that better characterize those long-term dependencies.
+
+
+
+Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for the LSTM and BN-LSTM models. Recurrent batch normalization leds to better test score, especially for $p$-MNIST  where models have to leverage long-term temporal depencies. In addition, Table~\ref{tab:seqmnist_test} shows that our batch normalized LSTM achieves state-of-art on both MNIST and pMNIST.
+
 \subsection{Character-level Penn Treebank}
+
+We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\cite{penntreebank}.
+We follow the setup of~\cite{krueger}, dividing the training set into nonoverlapping subsequences of length 50.
+Our baseline is an LSTM with 1000 units.
+We use stochastic gradient descent on minibatches of size 100,
+with gradient clipping at 1.0 and step rule determined by RMSProp~\cite{rmsprop}
+with learning rate 0.001 and momentum 0.9.
+We use orthogonal initialization for all weight matrices.
+The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
+
+We were unable to reproduce the baseline reported in~\cite{krueger} and so are unable to compare directly to their results.
+However, we show that batch normalizing our best baseline enables it to train faster and generalize better.
+
+%\begin{figure}
+%\center
+%\includegraphics[width=7cm]{figures/ptb_valid.pdf}
+%\caption{Bits-per-character on the validation set for Penn Treebank during training.}
+%\label{fig:ptb_valid}
+%\end{figure}
+%
+%\begin{table}
+%\center
+%\begin{tabular}{c|c}
+%  \hline
+%  LSTM & BN-LSTM\\
+%  \hline
+%  NaN & NaN\\
+%  \textbf{NaN} & \textbf{NaN}\\
+%\end{tabular}
+%\caption{Bits-per-character on the Penn Treebank test string.}
+%\label{tab:ptb_test}
 
 \subsection{TIMIT}
 
-\subsection{Memory Networks}
+[do we include this? I'm not opposed to it but not sure what to say]
+
+\subsection{Teaching Machines to Read and Comprehend}
+
+To demonstrate the generality and practical applicability of our
+reparameterization, we take an implementation
+\footnote{The code can be found at \url{https://github.com/caglar/Attentive_reader}}
+of the Attentive Reader model~\cite{attentivereader} and simply replace the LSTM with our
+BN-LSTM.
+Additionally we try a variant where we also introduce batch
+normalization into the attention computations, normalizing each term
+going into the tanh nonlinearities.
+Without any tweaking, we gain dramatic acceleration of training.
+
+[Caglar will write a blurb on how the subset of data is selected]
+
+[I will show training curves]
 
 \section{Conclusion}
+
+\section*{Acknowledgements}
+
+Experiments were conducted using the Theano~\cite{theano1}~\cite{theano2} and Blocks and Fuel~\cite{blocks} libraries.
+[how to acknowledge use of cluster?]
+We thank Çağlar Gülçehre for sharing his implementation of Attentive Reader and for helping us with experiments,
+and David Krueger, Ishmael Belghazi and Saizheng Zhang for helpful discussions.
 
 \bibliography{index}
 \bibliographystyle{nips2015}
