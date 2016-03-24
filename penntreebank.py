@@ -14,9 +14,9 @@ from blocks.model import Model
 from blocks.extensions import FinishAfter, Printing, ProgressBar, Timing
 from blocks.extensions.monitoring import TrainingDataMonitoring, DataStreamMonitoring
 from blocks.extensions.stopping import FinishIfNoImprovementAfter
-from blocks.extensions.training import TrackTheBest, SharedVariableModifier
+from blocks.extensions.training import TrackTheBest
 from blocks.extensions.saveload import Checkpoint
-from extensions import DumpLog, DumpBest, PrintingTo, DumpVariables
+from extensions import DumpLog, DumpBest, PrintingTo, DumpVariables, SharedVariableModifier
 from blocks.main_loop import MainLoop
 from blocks.utils import shared_floatx_zeros
 from blocks.roles import add_role, PARAMETER

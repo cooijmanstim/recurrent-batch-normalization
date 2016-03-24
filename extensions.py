@@ -100,3 +100,16 @@ class DumpVariables(SimpleExtension):
                       zip(self.variables, self.function(**self.batch)))
         secure_dump(values, "%s_%i.pkl" % (self.save_path, self.i))
         self.i += 1
+
+class SharedVariableModifier(SimpleExtension):
+    def __init__(self, parameter, function, **kwargs):
+        kwargs.setdefault("after_batch", True)
+        super(SharedVariableModifier, self).__init__(**kwargs)
+        self.parameter = parameter
+        self.function = function
+
+    def do(self, which_callback, *args):
+        iterations_done = self.main_loop.log.status['iterations_done']
+        old_value = self.parameter.get_value()
+        new_value = self.function(iterations_done, old_value)
+        self.parameter.set_value(new_value)
