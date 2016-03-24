@@ -56,22 +56,35 @@ Empirical results show faster convergence and improved generalization on classif
 
 \section{Introduction}
 
-Training deep neural networks by gradient descent is hard due in large part to pathological curvature in the objective function.
-Approaches to alleviating this problem divide naturally into two categories: smarter optimization algorithms such as
-Hessian-Free~\cite{hessianfree} and various approximations to natural gradient~\cite{amari} proposed in~\cite{ollivier} and~\cite{KFAC},
-and model reparameterizations~\cite{efficientbackprop}~\cite{raiko}~\cite{naturalneuralnetworks}.
+
+%% FIXME redo intro
+
+%% Training deep neural networks by gradient descent is hard due in large part to pathological curvature in the objective function.
+%% Approaches to alleviating this problem divide naturally into two categories: smarter optimization algorithms such as
+%% Hessian-Free~\cite{hessianfree} and various approximations to natural gradient~\cite{amari} proposed in~\cite{ollivier} and~\cite{KFAC},
+%% and model reparameterizations~\cite{efficientbackprop}~\cite{raiko}~\cite{naturalneuralnetworks}.
+
+
+%%% This section mix up the argument of jacobian (backprop-through time) and hessian (high curvature) for hard optimization, need to be FIXED
+Recurent Neural Networks (RNN)  have recently exhibited state-of-art on a wide range of complex sequential problems including speech recognition~\cite{baidu}, machine translation~\cite{bahdanau2014neural} or image/video captionning~\cite{xu2015show,yao2015describing}. However, training RNN using first-order stochastic gradient descent (SGD) remains a difficult task due to well-known vanishing gradient problem~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
+Errors of a given state will not influence the sates far in the past as the gradient vanish when being backpropagated through-time,
+preventing RNN to capture long-term dependencies in the input data.
+While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, several RNN reparametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} have been found to help mitigate the vanishing gradient problem.
+%Success of first order SGD depends on the  the curvature of the objective that is optimized~\cite{hessianfree} which depends on the networks parametrization~\cite{amari}.
+Investigating difference parametrization of RNN is might allows to find model that are easier to optimize and are able to capture the data long-term dependencies.
 
 Batch normalization~\cite{batchnorm} is a recently proposed reparameterization that [actually works].
 It involves normalizing unit preactivations in order to make their distributions easier to control.
 This greatly improves the training dynamics of deep feedforward neural networks, leading to faster convergence and better generalization.
+Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
+[also normprop]
+However to our knowledge none of these schemes have yet been transferred to RNNs.
+
 
 However, applying batch normalization in recurrent neural networks (RNNs) has proven to be challenging.
 It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN~\cite{cesar}~\cite{baidu}, but not ``horizontally'' between timesteps.
 Indeed, normalizing horizontally -- where RNNs are deepest and would most benefit from the reparameterization -- was thought to be unhelpful until now.
 
-Recently, a related technique called weight normalization~\cite{weightnorm} was introduced, which has a similar effect to batch normalization yet might be easier to carry over to the recurrent setting.
-[also normprop]
-However to our knowledge none of these schemes have yet been transferred to RNNs.
 
 In this paper, we demonstrate how batch normalization can be used in RNNs to speed up optimization and improve generalization.
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
@@ -81,55 +94,53 @@ We show in Section~\ref{sec:experiments} our evaluations of the proposed reparam
 \section{Prerequisites}
 \label{sec:prerequisites}
 
-\subsection{Recurrent neural networks}
+\subsection{LSTM}
 
-Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$,
+In this section, we review Long Short Term Memory Network  (LSTM) networks~\cite{lstm} which
+are a particular type of RNN. An RNN model is applied to a sequence of inputs, which can have variable lengths.
+It defines a recurrent hidden state whose activation at each time is dependent on that of the previous time. Specifically, given a sequence
+$\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$, the RNN  hidden state at time $t$ is defined as
+\begin{eqnarray}
+  \mat{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b})
+\end{eqnarray}
+where $\mat{W}_h \in \reals^{d_h \times d_h}, \mat{W}_x \in \reals^{d_x \times d_h}, \vect{b} \in \reals^{d_h}$ are model parameters.
+and $\phi$  is a nonlinear activation function such as $\mathrm{tanh}$
 
-\begin{align}
-\vect{h}_t = \mathrm{tanh}(
-  \mat{W}_h \vect{h}_{t-1} +
-  \mat{W}_x \vect{x}_t +
-  \vect{b})
-\end{align}
-
-where $\mat{W}_h \in \reals^{d_h \times d_h},
-       \mat{W}_x \in \reals^{d_x \times d_h},
-       \vect{b} \in \reals^{d_h}$
-  and the initial state $\vect{h}_0 \in \reals^{d_h}$
-  are model parameters.
-
-RNNs are popular in sequence modeling tasks, as they naturally apply to variable-length sequences.
-
-Being dynamical systems, RNNs can exhibit chaotic behavior, and indeed controlling their dynamics is an area of active research.
+%Being dynamical systems, RNNs can exhibit chaotic behavior, and indeed controlling their dynamics is an area of active research.
 Training RNNs by gradient descent is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient.
-This leads to the much-studied problem of vanishing and exploding gradients~\cite{bengiolongterm}~\cite{pascanudifficulty}.
-
-There exist a number of variants of the basic RNN given above, some specifically designed to address the problem of vanishing and exploding gradients, such as the Long Short-Term Memory (LSTM) unit~\cite{lstm} and Unitary RNNs~\cite{urnn}.  We will focus on LSTM, with recurrent transition given by
-
-\begin{align}
+This leads to the well-known problem of vanishing and exploding gradients~\cite{bengiolongterm,pascanudifficulty}.
+LSTM is a commonly used reparametrization that is specifically  designed to address the problem of vanishing and exploding gradients.
+The LSTM recurrent transition is given by:
+\begin{eqnarray}
 \left(\begin{array}{ccc}
 \tilde{\vect{f}}_t \\
 \tilde{\vect{i}}_t \\
 \tilde{\vect{o}}_t \\
 \tilde{\vect{g}}_t
 \end{array}\right)
- &=
+ &=&
  \mat{W}_h \vect{h}_{t-1} +
  \mat{W}_x \vect{x}_t +
  \vect{b}
-\\
-\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
-              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
-\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t)
-\end{align}
+ \\
+\vect{c}_t &= &\sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+\sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= &\sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t)
+\end{eqnarray}
+where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and $\sigma$ is the sigmoid non-linearity model parameters. The $\ewprod$ operator denotes the Hadamard product.
 
-where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and the initial states $\vect{c}_0, \vect{h}_0 \in \reals^{d_h}$ are model parameters.
-The $\ewprod$ operator denotes the elementwise product.
-
-Intuitively, LSTM improves on the basic RNN in two ways.
-First, it has an additional recurrent \emph{cell} state $\vect{c}_t$ whose recurrence is nearly linear, which allows gradient to flow more easily.
-Second, communication between this state and $\vect{h}_t$ and $\vect{x}_t$ is controlled by the gates $\vect{f}_t$, $\vect{i}_t$ and $\vect{o}_t$.
+LSTM has an  additional memory \emph{cell} state $\vect{c}_t$ whose update is nearly linear which would
+allow the gradient to flow more easily through time.
+In addition, unlike to the RNN which overwrites its content at each time-step,
+an LSTM unit is able to decide whether to keep the existing memory via the introduced gates $\vect{f}_t$, $\vect{i}_t$.
+The gate $\vect{o}_t$ defines how much of the memory $\vect{c}_t$ will be ``pass'' to the next timeset.
+%%  if the LSTM unit detects an important feature from an input sequence at early stage, it
+%% easily carries this information (the existence of the feature) over a long distance, hence, capturing
+%% potential long-distance dependencies.
 With these gates, the model can control what to forget and what to remember.
+
+
+
 
 \subsection{Batch normalization}
 
@@ -155,6 +166,52 @@ Deep neural networks trained with batch normalization converge significantly fas
 
 \section{Recurrent batch normalization}
 \label{sec:recurrent-batch-normalization}
+
+
+\subsection{Batch-normalized LSTM}
+
+We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM transition as follows:
+
+\begin{align}
+\left(\begin{array}{ccc}
+\tilde{\vect{f}}_t \\
+\tilde{\vect{i}}_t \\
+\tilde{\vect{o}}_t \\
+\tilde{\vect{g}}_t
+\end{array}\right)
+ &=
+ \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
+ \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
+ \vect{b}
+\\
+\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
+              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
+ \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
+)
+\end{align}
+
+Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
+This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
+To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
+
+In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
+
+During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
+During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
+
+
+\subsection{Population Statistics}
+
+
+\section{On the Importance of Pre-Activation Variances}
+
+\section{Experiments}
+\label{sec:experiments}
+
+
+%%% Find better title
+\subsection{Model Specification}
 
 A RNN can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
@@ -195,41 +252,6 @@ This avoids saturating the nonlinearities and enables better flow of gradients.
 Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
 [yet explode in LSTM...]
 \end{itemize}
-
-\subsection{Batch-normalized LSTM}
-
-We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM transition as follows:
-
-\begin{align}
-\left(\begin{array}{ccc}
-\tilde{\vect{f}}_t \\
-\tilde{\vect{i}}_t \\
-\tilde{\vect{o}}_t \\
-\tilde{\vect{g}}_t
-\end{array}\right)
- &=
- \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
- \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
- \vect{b}
-\\
-\vect{c}_t &= \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
-              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
-\vect{h}_t &= \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
- \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
-)
-\end{align}
-
-Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
-This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
-To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
-
-In order to leave the LSTM dynamics intact, we do not introduce batch normalization into the recurrence of the cell states.
-
-During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
-During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
-
-\section{Experiments}
-\label{sec:experiments}
 
 \subsection{Sequential MNIST}
 
@@ -281,7 +303,7 @@ the original pixel ordering, where a lot of structure is local. A recurrent netw
 
 
 
-Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for the LSTM and BN-LSTM models. Recurrent batch normalization leds to better test score, especially for $p$-MNIST  where models have to leverage long-term temporal depencies. In addition, Table~\ref{tab:seqmnist_test} shows that our batch normalized LSTM achieves state-of-art on both MNIST and $p$-MNIST.
+Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for the LSTM and BN-LSTM models using the population statistics. Recurrent batch normalization leds to better test score, especially for $p$-MNIST  where models have to leverage long-term temporal depencies. In addition, Table~\ref{tab:seqmnist_test} shows that our batch normalized LSTM achieves state-of-art on both MNIST and $p$-MNIST.
 
 \subsection{Character-level Penn Treebank}
 
