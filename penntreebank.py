@@ -9,7 +9,7 @@ import fuel.datasets, fuel.streams, fuel.transformers, fuel.schemes
 
 # i shake my head
 from blocks.graph import ComputationGraph
-from blocks.algorithms import GradientDescent, RMSProp, StepClipping, CompositeRule, Momentum
+from blocks.algorithms import GradientDescent, RMSProp, StepClipping, CompositeRule, Momentum, Adam
 from blocks.model import Model
 from blocks.extensions import FinishAfter, Printing, ProgressBar, Timing
 from blocks.extensions.monitoring import TrainingDataMonitoring, DataStreamMonitoring
@@ -411,7 +411,7 @@ if __name__ == "__main__":
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--peepholes", action="store_true")
-    parser.add_argument("--optimizer", choices="sgdmomentum rmsprop", default="rmsprop")
+    parser.add_argument("--optimizer", choices="sgdmomentum rmsprop adam".split(), default="rmsprop")
     parser.add_argument("--learning-rate-decay", type=float, default=0.0)
     parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
@@ -429,7 +429,9 @@ if __name__ == "__main__":
     graphs, extensions, updates = construct_graphs(args, nclasses)
 
     ### optimization algorithm definition
-    if args.optimizer == "rmsprop":
+    if args.optimizer == "adam":
+        optimizer = Adam(learning_rate=args.learning_rate)
+    elif args.optimizer == "rmsprop":
         optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
     elif args.optimizer == "sgdmomentum":
         optimizer = Momentum(learning_rate=args.learning_rate, momentum=0.99)
