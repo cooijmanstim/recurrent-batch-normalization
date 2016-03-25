@@ -97,9 +97,8 @@ It has found limited use in stacked RNNs, where the normalization is applied ``v
 Authors of ~\cite{cesar} hypothesises that applying batch-norm on the hidden-to-hidden transition hurts the training
 because of the repeated application of the batchnorm scale and shift parameters could lead to exploding or vanishing gradients.
 
-In contrary to this belief, our findings shows that it is possible to apply batch-normalization to a RNN/LSTM models and that both training and regularization
-benefits can be osbserve as well. In this paper, we demonstrate how batch normalization can be used in RNNs to speed up optimization and improve
-generalization. In addition, we also shows that batch-normalization provide a way of stabilizing the layer activation function, making it less likely
+%% DO we keep RNN?
+In contrary to those works, our findings shows that it is possible to apply batch-normalization to a RNN/LSTM hidden-to-hidden transition and demonstrate how batch normalization can be used in to speed up optimization and improve generalization. In addition, we also shows that batch-normalization provide a way of stabilizing the layer activation function, making it less likely
 to saturate, hence easing the gradient backpropagation.
 
 
