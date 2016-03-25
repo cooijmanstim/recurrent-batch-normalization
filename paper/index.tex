@@ -369,7 +369,7 @@ We follow the setup of~\cite{krueger}, dividing the training set into nonoverlap
 Our baseline is an LSTM with 1000 units.
 We use stochastic gradient descent on minibatches of size 100,
 with gradient clipping at 1.0 and step rule determined by RMSProp~\cite{rmsprop}
-with learning rate 0.001 and momentum 0.9.
+with learning rate 0.1 and momentum 0.9.
 We use orthogonal initialization for all weight matrices.
 The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
 
@@ -394,6 +394,27 @@ However, we show that batch normalizing our best baseline enables it to train fa
 %\end{tabular}
 %\caption{Bits-per-character on the Penn Treebank test string.}
 %\label{tab:ptb_test}
+
+\begin{tabular}{c|c}
+  & Penn Treebank \\
+  \hline
+  LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
+  \hline
+  LSTM & NaN \\
+  BN-LSTM & \textbf{NaN} \\
+\end{tabular}
+
+\subsection{text8}
+
+\begin{tabular}{c|c}
+  & text8 \\
+  \hline
+  $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
+  HF-MRNN/ME~\cite{mikolov2012subword} & 1.47 \\
+  \hline
+  LSTM & NaN \\
+  BN-LSTM & \textbf{NaN} \\
+\end{tabular}
 
 \subsection{TIMIT}
 
