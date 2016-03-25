@@ -409,11 +409,20 @@ BN-LSTM.
 Additionally we try a variant where we also introduce batch
 normalization into the attention computations, normalizing each term
 going into the tanh nonlinearities.
-Without any tweaking, we gain dramatic acceleration of training.
+Without any tweaking, we gain dramatic acceleration of training (Figure~\ref{fig:attr_valid}).
 
 [Caglar will write a blurb on how the subset of data is selected]
 
-[I will show training curves]
+\begin{figure}
+\center
+\includegraphics[width=0.8\textwidth]{figures/attr_valid.pdf}
+\caption{
+Accuracy on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
+BN-LSTM converges much faster than the baseline LSTM.
+Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
+}
+\label{fig:attr_valid}
+\end{figure}
 
 \section{Conclusion}
 
