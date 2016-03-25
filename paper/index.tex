@@ -113,8 +113,8 @@ In this section we review the LSTM and batch-norm re-parametrization.
 
 \subsection{LSTM}
 
-Long Short Term Memory Network  (LSTM) networks~\cite{lstm}
-are a particular type of RNN. An RNN model is applied to a sequence of inputs, which can have variable lengths.
+We first quickly review the general formuation of the the Recurent Neural Network (RNN).
+An RNN model is applied to a sequence of inputs, which can have variable lengths.
 It defines a recurrent hidden state whose activation at each time is dependent on that of the previous time. Specifically, given a sequence
 $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$, the RNN  hidden state at time $t$ is defined as
 \begin{eqnarray}
@@ -128,8 +128,8 @@ and $\phi$  is a nonlinear activation function such as $\mathrm{tanh}$
 Training RNNs using first-order stochastic gradient descent (SGD)t is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 In particular in case of gradient vanishing, errors of a given state will not influence the states far in the past,
  preventing RNN to capture long-term dependencies in the input data.
-While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN re-parametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
-We will focus on the LSTM re-parametrization in this paper. The LSTM recurrent transition is given by:
+ While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN re-parametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
+ Long Short Term Memory Network  (LSTM) networks~\cite{lstm} is a particular type of RNN. which recurrent transition is given by:
 \begin{eqnarray}
 \left(\begin{array}{ccc}
 \tilde{\vect{f}}_t \\
