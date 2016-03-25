@@ -80,31 +80,31 @@ Empirical results show faster convergence and improved generalization on classif
 Recurent Neural Networks (RNN)  through the LSTM/GRU re-parametrization~\cite{lstm,cho2014learning} have recently exhibited state-of-art on a wide range of complex sequential problems including speech recognition~\cite{baidu}, machine translation~\cite{bahdanau2014neural} or image/video captionning~\cite{xu2015show,yao2015describing}.
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and lead to time-costly training.
 
-Internal Covariate Shift~\cite{shimodaira2000improving,batchnorm} has been identified as one of the factor slowing down the training process.
-It is defined as the layers activations distribution shifting due to the change in network parameters.
-The shift in the input of a layer presents a problem because as the layer need to continuously
-adapt to the new distribution. Due to its nature, Internal Covariation Shift is especially prononced in very deep network such as RNN where each time-step can be view as the application of a layers.
+Internal Covariate Shift~\cite{shimodaira2000improving,batchnorm} is one of the factor slowing down the training process.
+It is defined as the shifting of the layers activations due to the change in network parameters.
+Due to this distribtion shift, a layer needs to continuously adapt to the new input distribution.
+Internal Covariation Shift is especially prononced in very deep network such as RNN where each time-step can be view as the application of a layers.
 
-Batch normalization~\cite{batchnorm} is a recently proposed reparameterization in feedforward network by fixing the distribution of the layer inputs as the training progresses, hence reducing the internal covariate shift.
+Batch normalization~\cite{batchnorm} is a recently proposed feedforward network re-parameterization that addresses the distribution shifting of layer inputs, hence reducing the internal covariate shift.
 Batch normalization proposes to whitten the activation of each layer, relying on the observation that networks converge faster when its inputs
 have zero mean, unit variance and are uncorrelated~\cite{efficientbackprop}.
-In addition, in order to avoid the cost applying a full whittening on the activation,
+In addition, to avoid the cost applying a full whittening on the activation,
 batch norm approximates the activation mean and standard deviation using mini-batch statistics at each training interation
-iteration of training and uses these estimates to normalize the input of the next layer.
+and uses these estimates to normalize the input of the next layer.
 
-However, applying batch normalization in recurrent neural networks (RNNs) has proven to be challenging~\cite{cesar,baidu}.
-It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN, but not ``horizontally'' between timesteps, where RNNs are deepest and would most benefit from the reparameterization.
+While having demonstrated a significant training speed-up and generalization benefit in feedforward network, applying batch normalization in recurrent neural networks (RNNs) has proven to be challenging~\cite{cesar,baidu}.
+It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN, but not ``horizontally'' between timesteps, where RNNs are deepest and would most benefit from the re-parameterization.
 Authors of ~\cite{cesar} hypothesises that applying batch-norm on the hidden-to-hidden transition hurts the training
 because of the repeated application of the batchnorm scale and shift parameters could lead to exploding or vanishing gradients.
 
 %% DO we keep RNN?
-In contrary to those works, our findings shows that it is possible to apply batch-normalization to a RNN/LSTM hidden-to-hidden transition and demonstrate how batch normalization can be used in to speed up optimization and improve generalization. In addition, we also shows that batch-normalization provide a way of stabilizing the layer activation function, making it less likely
+Contrary to those works, our findings shows that it is indeed possible to apply batch-normalization to a RNN/LSTM hidden-to-hidden transition and demonstrate how batch normalization can be used in to speed up optimization and improve generalization. In addition, we also shows that batch-normalization provide a way of stabilizing the layer activation function, making it less likely
 to saturate, hence easing the gradient backpropagation.
 
 
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
 In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
-We show in Section~\ref{sec:experiments} our evaluations of the proposed reparameterization on a variety of tasks.
+We show in Section~\ref{sec:experiments} our evaluations of the proposed re-parameterization on a variety of tasks.
 
 \section{Prerequisites}
 \label{sec:prerequisites}
@@ -126,8 +126,8 @@ and $\phi$  is a nonlinear activation function such as $\mathrm{tanh}$
 Training RNNs using first-order stochastic gradient descent (SGD)t is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 In particular in case of gradient vanishing, errors of a given state will not influence the states far in the past,
  preventing RNN to capture long-term dependencies in the input data.
-While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN reparametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
-We will focus on the LSTM reparametrization in this paper. The LSTM recurrent transition is given by:
+While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN re-parametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
+We will focus on the LSTM re-parametrization in this paper. The LSTM recurrent transition is given by:
 \begin{eqnarray}
 \left(\begin{array}{ccc}
 \tilde{\vect{f}}_t \\
@@ -168,7 +168,7 @@ The change in the distributions of layer $l$ inputs presents a problem because t
 This distribution variation is called the Internal Covariate Shift~\cite{shimodaira2000improving}.
 Reducing the internal covariate shift should leads  faster training as upper layer does not need to adapt to the distribution change.
 
-Batch Normalization~\cite{batchnorm} proposes a network reparametrization applied to neural network preactivations that takes a step towards reducing
+Batch Normalization~\cite{batchnorm} proposes a network re-parametrization applied to neural network preactivations that takes a step towards reducing
 internal covariate shift. Batch normalization] approximates the
 whitening by standardizing the preactivation using the statistics of the current batch..
 The batch normalizing transform is as follows:
@@ -193,7 +193,7 @@ Deep neural networks trained with batch normalization converge significantly fas
 \section{Recurrent batch normalization}
 \label{sec:recurrent-batch-normalization}
 
-This section introduces a reparametrization of LSTM that takes advantage
+This section introduces a re-parametrization of LSTM that takes advantage
 of Batch Normalization. Contrary to previous works~\cite{cesar, baidu}, we leverage of batch normalization in both input-to-hidden and hidden-to-hidden transformation.
 
 
@@ -448,7 +448,7 @@ However, we show that batch normalizing our best baseline enables it to train fa
 \subsection{Teaching Machines to Read and Comprehend}
 
 To demonstrate the generality and practical applicability of our
-reparameterization, we take an implementation
+re-parameterization, we take an implementation
 \footnote{The code can be found at \url{https://github.com/caglar/Attentive_reader}}
 of the Attentive Reader model~\cite{attentivereader} and simply replace the LSTM with our
 BN-LSTM.
