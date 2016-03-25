@@ -230,10 +230,16 @@ Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the 
 High variance input is more likely to be in the saturating regime where the derivative is small,
 whereas low variance input is more likely to be in the linear regime around the origin.
 
-Batch normalization allows for easy control of the pre-activation variance,
+Batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
 but the common practice of normalizing to unit variance causes gradient to vanish in recurrent and very deep feedforward networks.
+In Figure~\ref{fig:rnn_grad} we demonstrate how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
+Since backpropagation operates in reverse, the plot is best read from right to left.
+The quantity plotted is the norm of the gradient of the loss with respect to the hidden states.
+For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
+For small values of $\gamma$ the norm is nearly constant.
 
-% TODO: flesh out, show gradient propagation vs gamma plots
+% TODO: discuss lstm plot
+% TODO: make lstm plot with baseline pre-activation variances
 
 \section{Experiments}
 \label{sec:experiments}
@@ -246,7 +252,7 @@ but the common practice of normalizing to unit variance causes gradient to vanis
 \begin{figure}
 \center
 \includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
-\caption{Convergence of population statistics to stationary distributions. Only a random subset of population statistics is shown.}
+\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
 \label{fig:popstat_stationarity}
 \end{figure}
 
@@ -292,7 +298,7 @@ Indeed, we found that normalizing to unit variance caused the gradient to vanish
 \end{itemize}
 
 \subsection{Sequential MNIST}
-
+\label{sec:seqmnist}
 
 \begin{figure}
 \center
