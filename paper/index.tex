@@ -401,6 +401,8 @@ with learning rate 0.1 and momentum 0.9.
 We use orthogonal initialization for all weight matrices.
 The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
 
+%TODO move the repeat-population-statistics technicalities here
+
 We were unable to reproduce the baseline reported in~\cite{krueger} and so are unable to compare directly to their results.
 However, we show that batch normalizing our best baseline enables it to train faster and generalize better.
 
@@ -410,39 +412,51 @@ However, we show that batch normalizing our best baseline enables it to train fa
 %\caption{Bits-per-character on the validation set for Penn Treebank during training.}
 %\label{fig:ptb_valid}
 %\end{figure}
-%
-%\begin{table}
-%\center
-%\begin{tabular}{c|c}
-%  \hline
-%  LSTM & BN-LSTM\\
-%  \hline
-%  NaN & NaN\\
-%  \textbf{NaN} & \textbf{NaN}\\
-%\end{tabular}
-%\caption{Bits-per-character on the Penn Treebank test string.}
-%\label{tab:ptb_test}
 
+\begin{table}
+\center
 \begin{tabular}{c|c}
   & Penn Treebank \\
   \hline
+  LSTM~\cite{graves2013generating} & 1.26
+\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
+\\
   LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
   \hline
   LSTM & NaN \\
   BN-LSTM & \textbf{NaN} \\
 \end{tabular}
+\caption{Bits-per-character on the Penn Treebank test string.}
+\label{tab:ptb_test}
+\end{table}
+
+Table~\ref{tab:ptb_test} reports our performance in bits-per-character on the Penn Treebank test string.
 
 \subsection{text8}
 
+We evaluate our model on a second character-level language modeling task on the text8 dataset
+\footnote{\url{http://mattmahoney.net/dc/textdata}}.
+This dataset is derived from Wikipedia and consists of a string of 100M characters including only alphabetical characters and spaces.
+We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
+We train on nonoverlapping sequences of length 180.
+
+\begin{table}
+\center
 \begin{tabular}{c|c}
   & text8 \\
   \hline
   $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
-  HF-MRNN/ME~\cite{mikolov2012subword} & 1.47 \\
+  HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
+  skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
   \hline
   LSTM & NaN \\
   BN-LSTM & \textbf{NaN} \\
 \end{tabular}
+\caption{Bits-per-character on the text8 test string.}
+\label{tab:text8_test}
+\end{table}
+
+Table~\ref{tab:text8_test} reports our performance in bits-per-character on the text8 test string.
 
 \subsection{TIMIT}
 
