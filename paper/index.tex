@@ -3,6 +3,7 @@
 \usepackage{nips15submit_e,times}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{subfigure}
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{times}
@@ -244,26 +245,41 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 \section{On the Importance of Pre-Activation Variances}
 
 \begin{figure}
-\center
-\includegraphics[width=6.7cm]{figures/tanh_grad.pdf}
-\caption{Influence of pre-activation standard deviation on expected derivative of tanh nonlinearity}
-\label{fig:tanh_grad}
+  \center%
+  \subfigure[
+Empirical expected derivative of $\tanh$ nonlinearity as a function of input variance.
+High variance causes saturation, which decreases the expected derivative.
+]{%
+    \label{fig:tanh_grad}
+    \includegraphics[width=.45\textwidth]{figures/tanh_grad.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+Gradient flow through a batch-normalized $\tanh$ RNN as a function of $\gamma$.
+High variance causes gradient vanishing.
+]{%
+    \label{fig:rnn_grad_prop}
+    \includegraphics[width=.45\textwidth]{figures/rnn_grad_prop.pdf}
+  }
+  \caption{
+Influence of pre-activation variance on gradient propagation.
+}
+  \label{figure:DCNtradeoff}
 \end{figure}
 
-In section we develop the observation that high-variance pre-activations tend to saturate $\tanh$ nonlinearities.
+In section we develop the observation that high-variance pre-activations tend to saturate sigmoid nonlinearities.
 Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the tanh nonlinearity changes with the variance of the argument.
 High variance input is more likely to be in the saturating regime where the derivative is small,
 whereas low variance input is more likely to be in the linear regime around the origin.
 
 Batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
 but the common practice of normalizing to unit variance causes gradient to vanish in recurrent and very deep feedforward networks.
-In Figure~\ref{fig:rnn_grad} we demonstrate how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
+In Figure~\ref{fig:rnn_grad_prop} we demonstrate how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
 Since backpropagation operates in reverse, the plot is best read from right to left.
 The quantity plotted is the norm of the gradient of the loss with respect to the hidden states.
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-% TODO: discuss lstm plot
 % TODO: make lstm plot with baseline pre-activation variances
 
 \section{Experiments}
@@ -421,11 +437,20 @@ BN-LSTM.
 Additionally we try a variant where we also introduce batch
 normalization into the attention computations, normalizing each term
 going into the tanh nonlinearities.
-Without any tweaking, we gain dramatic acceleration of training.
+Without any tweaking, we gain dramatic acceleration of training (Figure~\ref{fig:attr_valid}).
 
 [Caglar will write a blurb on how the subset of data is selected]
 
-[I will show training curves]
+\begin{figure}
+\center
+\includegraphics[width=0.8\textwidth]{figures/attr_valid.pdf}
+\caption{
+Accuracy on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
+BN-LSTM converges much faster than the baseline LSTM.
+Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
+}
+\label{fig:attr_valid}
+\end{figure}
 
 \section{Conclusion}
 
