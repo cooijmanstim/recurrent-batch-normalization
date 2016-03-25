@@ -207,7 +207,7 @@ To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead r
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
 During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
-During inference we use estimates obtained by averaging the minibatch estimates both across the training set and across time.
+During inference we use estimates obtained by averaging the minibatch estimates over the training set.
 
 %% FIXME develop a little bit
 %% Speak about the population statistics
@@ -218,12 +218,38 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 \section{On the Importance of Pre-Activation Variances}
 
+\begin{figure}
+\center
+\includegraphics[width=6.7cm]{figures/tanh_grad.pdf}
+\caption{Influence of pre-activation standard deviation on expected derivative of tanh nonlinearity}
+\label{fig:tanh_grad}
+\end{figure}
+
+We dedicate this section to the straightforward but crucial observation that high-variance pre-activations tend to saturate sigmoid nonlinearities.
+Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the tanh nonlinearity changes with the variance of the argument.
+High variance input is more likely to be in the saturating regime where the derivative is small,
+whereas low variance input is more likely to be in the linear regime around the origin.
+
+Batch normalization allows for easy control of the pre-activation variance,
+but the common practice of normalizing to unit variance causes gradient to vanish in recurrent and very deep feedforward networks.
+
+% TODO: flesh out, show gradient propagation vs gamma plots
+
 \section{Experiments}
 \label{sec:experiments}
 
 
 %%% Find better title
 \subsection{Model Specification}
+
+
+\begin{figure}
+\center
+\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
+\caption{Convergence of population statistics to stationary distributions. Only a random subset of population statistics is shown.}
+\label{fig:popstat_stationarity}
+\end{figure}
+
 
 A RNN can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
@@ -234,12 +260,12 @@ However, unrolled RNNs differ from true feedforward networks in several importan
 The parameters in an unrolled RNN are shared across layers.
 This suggests that the statistics used for normalization should be shared as well.
 However, we have found that estimating the statistics independently at each timestep works best.
-With batch normalization, the activations rapidly converge to a stationary distribution (cf. a figure), so independent estimation does not hurt performance.
+With batch normalization, the activations rapidly converge to a stationary distribution (see Figure~\ref{fig:popstat_stationarity}), so independent estimation does not hurt performance.
 Indeed, we find that sharing statistics does hurt performance, as the distribution of activations during the first few timesteps is very different from the stationary distribution.
 \\ \item
 The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
 This poses a problem if we want to estimate the population statistics for different timesteps independently.
-However, thanks to the stationarity of the activation distribution (cf. that figure) we can use the estimates of earlier timesteps for later timesteps.
+However, thanks to the stationarity of the activation distribution (cf. Figure~\ref{fig:popstat_stationarity}) we can use the estimates of earlier timesteps for later timesteps.
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
