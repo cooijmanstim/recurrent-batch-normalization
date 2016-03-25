@@ -66,12 +66,11 @@ Empirical results show faster convergence and improved generalization on classif
 
 
 %%% This section mix up the argument of jacobian (backprop-through time) and hessian (high curvature) for hard optimization, need to be FIXED
-Recurent Neural Networks (RNN)  have recently exhibited state-of-art on a wide range of complex sequential problems including speech recognition~\cite{baidu}, machine translation~\cite{bahdanau2014neural} or image/video captionning~\cite{xu2015show,yao2015describing}. However, training RNN using first-order stochastic gradient descent (SGD) remains a difficult task due to well-known vanishing gradient problem~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
-Errors of a given state will not influence the sates far in the past as the gradient vanish when being backpropagated through-time,
+Recurent Neural Networks (RNN)  have recently exhibited state-of-art on a wide range of complex sequential problems including speech recognition~\cite{baidu}, machine translation~\cite{bahdanau2014neural} or image/video captionning~\cite{xu2015show,yao2015describing}. However, training RNN using first-order stochastic gradient descent (SGD) remains a difficult task due to well-known exploding/vanishing gradient problem~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
+In the second case, errors of a given state will not influence the states far in the past as the gradient vanish when being backpropagated through-time,
 preventing RNN to capture long-term dependencies in the input data.
 While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, several RNN reparametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} have been found to help mitigate the vanishing gradient problem.
 %Success of first order SGD depends on the  the curvature of the objective that is optimized~\cite{hessianfree} which depends on the networks parametrization~\cite{amari}.
-Investigating difference parametrization of RNN is might allows to find model that are easier to optimize and are able to capture the data long-term dependencies.
 
 Batch normalization~\cite{batchnorm} is a recently proposed reparameterization that [actually works].
 It involves normalizing unit preactivations in order to make their distributions easier to control.
@@ -213,8 +212,6 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 %% Speak about the population statistics
 
 
-\subsection{Population Statistics}
-
 
 \section{On the Importance of Pre-Activation Variances}
 
@@ -225,7 +222,7 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 \label{fig:tanh_grad}
 \end{figure}
 
-We dedicate this section to the straightforward but crucial observation that high-variance pre-activations tend to saturate sigmoid nonlinearities.
+In section we develop the observation that high-variance pre-activations tend to saturate $\tanh$ nonlinearities.
 Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the tanh nonlinearity changes with the variance of the argument.
 High variance input is more likely to be in the saturating regime where the derivative is small,
 whereas low variance input is more likely to be in the linear regime around the origin.
