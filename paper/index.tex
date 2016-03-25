@@ -124,16 +124,11 @@ and $\phi$  is a nonlinear activation function such as $\mathrm{tanh}$
 
 
 %%% TO Add
-%% However, training RNN using first-order stochastic gradient descent (SGD) remains a difficult task due to well-known exploding/vanishing gradient problem~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
-%% In the second case, errors of a given state will not influence the states far in the past as the gradient vanish when being backpropagated through-time,
-%% preventing RNN to capture long-term dependencies in the input data.
-%% While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN reparametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
-
-%Being dynamical systems, RNNs can exhibit chaotic behavior, and indeed controlling their dynamics is an area of active research.
-Training RNNs by gradient descent is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient.
-This leads to the well-known problem of vanishing and exploding gradients~\cite{bengiolongterm,pascanudifficulty}.
-LSTM is a commonly used reparametrization that is specifically  designed to address the problem of vanishing and exploding gradients.
-The LSTM recurrent transition is given by:
+Training RNNs using first-order stochastic gradient descent (SGD)t is notoriously difficult as we need to not only control the dynamics of the forward-propagated activations but also those of the back-propagated gradient~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
+In particular in case of gradient vanishing, errors of a given state will not influence the states far in the past,
+ preventing RNN to capture long-term dependencies in the input data.
+While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning}, it has been demonstrated that different RNN reparametrization, such the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn} can help mitigate the vanishing gradient problem.
+We will focus on the LSTM reparametrization in this paper. The LSTM recurrent transition is given by:
 \begin{eqnarray}
 \left(\begin{array}{ccc}
 \tilde{\vect{f}}_t \\
