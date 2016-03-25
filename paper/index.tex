@@ -219,13 +219,41 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 )
 \end{eqnarray}
 
-Note how we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
+%% There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
+%% We find that we need to normalize these terms separately before adding them up.
+%% This gives the model better control over the relative contribution of the terms.
+
+We normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
 To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
+
+
+
+%% FIXME population statistics:
+The parameters in an unrolled RNN are shared across layers.
+This suggests that the statistics used for normalization should be shared as well.
+However, we have found that estimating the statistics independently at each timestep works best.
+With batch normalization, the activations rapidly converge to a stationary distribution (see Figure~\ref{fig:popstat_stationarity}), so independent estimation does not hurt performance.
+Indeed, we find that sharing statistics does hurt performance, as the distribution of activations during the first few timesteps is very different from the stationary distribution.
+
+The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
+This poses a problem if we want to estimate the population statistics for different timesteps independently.
+However, thanks to the stationarity of the activation distribution (cf. Figure~\ref{fig:popstat_stationarity}) we can use the estimates of earlier timesteps for later timesteps.
+For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
+When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
+
+[there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
+[additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
+
+
+
 During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
 During inference we use estimates obtained by averaging the minibatch estimates over the training set.
+
+
+
 
 %% FIXME develop a little bit
 %% Speak about the population statistics
@@ -233,6 +261,12 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 
 \section{On the Importance of Pre-Activation Variances}
+
+%% Unrolled RNNs are usually much deeper than typical feedforward networks.
+%% Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
+%% This avoids saturating the nonlinearities and enables better flow of gradients.
+%% Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
+%% [yet explode in LSTM...]
 
 \begin{figure}
   \center%
@@ -292,41 +326,6 @@ A RNN can be ``unrolled'' and viewed as a feedforward neural network.
 This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
 However, unrolled RNNs differ from true feedforward networks in several important respects that complicate the application of batch normalization.
 
-\begin{itemize}
-\item
-The parameters in an unrolled RNN are shared across layers.
-This suggests that the statistics used for normalization should be shared as well.
-However, we have found that estimating the statistics independently at each timestep works best.
-With batch normalization, the activations rapidly converge to a stationary distribution (see Figure~\ref{fig:popstat_stationarity}), so independent estimation does not hurt performance.
-Indeed, we find that sharing statistics does hurt performance, as the distribution of activations during the first few timesteps is very different from the stationary distribution.
-\\ \item
-The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
-This poses a problem if we want to estimate the population statistics for different timesteps independently.
-However, thanks to the stationarity of the activation distribution (cf. Figure~\ref{fig:popstat_stationarity}) we can use the estimates of earlier timesteps for later timesteps.
-For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
-When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
-
-[there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
-[additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
-\\ \item
-There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-We find that we need to normalize these terms separately before adding them up.
-This gives the model better control over the relative contribution of the terms.
-\\ \item
-The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
-This problem is exacerbated in unnatural data such as MNIST and various pathological tasks, where some features are constant across the data.
-In the sequential MNIST task in particular, the variance is typically exactly zero for the first hundred or so time steps, as the upper pixels are almost always black.
-Normalizing these zero-variance activations involves division by a very small number at many timesteps, which causes the gradient to explode.
-We work around this by injecting noise into the initial hidden states.
-Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
-[but is that an artifact of classification at the end?]
-\\ \item
-Unrolled RNNs are usually much deeper than typical feedforward networks.
-Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
-This avoids saturating the nonlinearities and enables better flow of gradients.
-Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
-[yet explode in LSTM...]
-\end{itemize}
 
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
@@ -349,6 +348,15 @@ is applied on the final hidden representation.
 LSTM relies on orthogonal initialization for the weight matrix, except for the hidden-to-hidden weight matrix that used identity initiliazation, as we observe better generalization performance with this
 initiliaziation for this tasks.
 The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
+
+The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
+This problem is exacerbated in unnatural data such as MNIST and various pathological tasks, where some features are constant across the data.
+In the sequential MNIST task in particular, the variance is typically exactly zero for the first hundred or so time steps, as the upper pixels are almost always black.
+Normalizing these zero-variance activations involves division by a very small number at many timesteps, which causes the gradient to explode.
+We work around this by injecting noise into the initial hidden states.
+Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
+%[but is that an artifact of classification at the end?]
+
 
 \begin{table}
 \center
