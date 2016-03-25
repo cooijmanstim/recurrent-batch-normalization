@@ -118,7 +118,7 @@ A RNN model is applied to a sequence of inputs, which can have variable lengths.
 It defines a recurrent hidden state whose activation at each time is dependent on that of the previous time. Specifically, given a sequence
 $\mat{X} = ( \vect{x}_1, \vect{x}_2, ... \vect{x}_T )$, the RNN  hidden state at time $t$ is defined as
 \begin{eqnarray}
-  \mat{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b})
+  \mat{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b}),
 \end{eqnarray}
 where $\mat{W}_h \in \reals^{d_h \times d_h}, \mat{W}_x \in \reals^{d_x \times d_h}, \vect{b} \in \reals^{d_h}$ are model parameters.
 and $\phi$  is a nonlinear activation function such as $\mathrm{tanh}$
@@ -144,7 +144,7 @@ In particular in case of gradient vanishing, errors of a given state will not in
  \\
 \vect{c}_t &= &\sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
 \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
-\vect{h}_t &= &\sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t)
+\vect{h}_t &= &\sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t),
 \end{eqnarray}
 where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and $\sigma$ is the sigmoid non-linearity model parameters. The $\ewprod$ operator denotes the Hadamard product.
 
