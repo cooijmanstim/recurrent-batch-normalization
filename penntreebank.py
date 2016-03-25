@@ -353,7 +353,7 @@ def construct_graphs(args, nclasses):
     if args.initialization in "identity orthogonal".split():
         args.initializer = orthogonal
     elif args.initialization == "uniform":
-        args.initializer = lambda shape: uniform(shape, 0.01)
+        args.initializer = lambda shape: uniform(shape, 0.02)
     elif args.initialization == "glorot":
         args.initializer = glorot
 
