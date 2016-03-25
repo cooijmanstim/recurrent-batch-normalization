@@ -428,6 +428,7 @@ if __name__ == "__main__":
          for name, param in model.get_parameter_dict().items()],
         data_stream=None, after_epoch=True))
 
+    validation_interval = 500
     # performance monitor
     for situation in "training".split(): #"training inference".split():
         for which_set in "train valid test".split():
@@ -435,7 +436,7 @@ if __name__ == "__main__":
             channels = list(graphs[situation].outputs)
             extensions.append(DataStreamMonitoring(
                 channels,
-                prefix="%s_%s" % (which_set, situation), after_epoch=True,
+                prefix="%s_%s" % (which_set, situation), every_n_batches=validation_interval,
                 data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
                                        num_examples=50000, length=args.length)))
 
@@ -452,7 +453,7 @@ if __name__ == "__main__":
 
     extensions.extend([
         Timing(),
-        Printing(),
+        Printing(every_n_batches=validation_interval),
         PrintingTo("log"),
     ])
     main_loop = MainLoop(
