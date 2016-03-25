@@ -431,6 +431,8 @@ if __name__ == "__main__":
     ### optimization algorithm definition
     if args.optimizer == "adam":
         optimizer = Adam(learning_rate=args.learning_rate)
+        # zzzz
+        optimizer.learning_rate = theano.shared(np.asarray(optimizer.learning_rate, dtype=theano.config.floatX))
     elif args.optimizer == "rmsprop":
         optimizer = RMSProp(learning_rate=args.learning_rate, decay_rate=0.9)
     elif args.optimizer == "sgdmomentum":
