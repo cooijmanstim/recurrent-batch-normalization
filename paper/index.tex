@@ -81,7 +81,7 @@ Recurent Neural Networks (RNN)  through the LSTM/GRU re-parametrization~\cite{ls
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and lead to time-costly training.
 
 Internal Covariate Shift~\cite{shimodaira2000improving,batchnorm} is one of the factor slowing down the training process.
-It is defined as the shifting of the layers activations due to the change in network parameters.
+It is defined as the change of the layers activations distributions due to the change in network parameters.
 Due to this distribtion shift, a layer needs to continuously adapt to the new input distribution.
 Internal Covariation Shift is especially prononced in very deep network such as RNN where each time-step can be view as the application of a layers.
 
