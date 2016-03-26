@@ -315,7 +315,7 @@ Influence of pre-activation variance on gradient propagation.
 \end{figure}
 
 In section we develop the observation that high-variance pre-activations tend to saturate sigmoid nonlinearities.
-Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the tanh nonlinearity changes with the variance of the argument.
+Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
 High variance input is more likely to be in the saturating regime where the derivative is small,
 whereas low variance input is more likely to be in the linear regime around the origin.
 
@@ -331,16 +331,6 @@ For small values of $\gamma$ the norm is nearly constant.
 
 \section{Experiments}
 \label{sec:experiments}
-
-
-%%% Find better title
-\subsection{Model Specification}
-
-
-A RNN can be ``unrolled'' and viewed as a feedforward neural network.
-This view suggests that the success of batch normalization in feedforward networks should carry over to the recurrent setting.
-However, unrolled RNNs differ from true feedforward networks in several important respects that complicate the application of batch normalization.
-
 
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
