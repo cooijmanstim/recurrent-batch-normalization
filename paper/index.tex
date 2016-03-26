@@ -324,6 +324,11 @@ We conjecture that this is what causes the gradient to vanish.
 \section{Experiments}
 \label{sec:experiments}
 
+This section presents an empirical evaluation of the proposed batch-normalized LSTM on five different tasks. Results show that batch-normalized LSTM achieves convergence faster than a baseline LSTM on all the tasks, and, can also
+achieves to better generalization.
+
+
+
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
 
@@ -339,7 +344,7 @@ We conjecture that this is what causes the gradient to vanish.
 
 We evaluate our batch-normalized LSTM on a sequential version of the MNIST classification task~\cite{le2015simple}.
 The model processes each image one pixel at a time and finally predicts the label.
-We consider both sequential MNIST tasks from~\cite{le2014simple}, MNIST and permuted MNIST ($p$MNIST).
+We consider both sequential MNIST tasks, MNIST and permuted MNIST ($p$MNIST).
 In MNIST, the pixels are processed from left to right, top to bottom.
 In $p$MNIST the pixels are processed in a fixed random order.
 
@@ -360,7 +365,6 @@ Although the normalization amplifies the noise to signal level, we find that it 
 
 \begin{table}
 \center
-\small
 \begin{tabular}{c|c|c}
   & MNIST & $p$MNIST \\
   \hline
