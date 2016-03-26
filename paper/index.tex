@@ -174,14 +174,13 @@ This carefully controlled interaction with the cell is what allows the LSTM to r
 \subsection{Batch normalization}
 
 %% Internal Covariate Shift
-In deep neural network, an given layer $l$ receives input samples from a distribution that is defined by the layers below $l$.
-As we update the network parameters, this distribution can vary during the course of training.
-The change in the distributions of layer $l$ inputs presents a problem because the layer need to continuously adapt to the new distribution
-This distribution variation is called the Internal Covariate Shift~\cite{shimodaira2000improving}.
-Reducing the internal covariate shift should leads  faster training as upper layer does not need to adapt to the distribution change.
+In a deep neural network, a given layer $l$ receives input samples from a distribution that is defined by the layers below $l$.
+As we update the network parameters during the course of training, this distribution varies.
+Changes in the input distribution of a layer present a problem as the layer needs to continuously adapt to the new distribution.
+This phenomenum is  called the Internal Covariate Shift~\cite{shimodaira2000improving} and reducing it should lead to  faster training.
 
 Batch Normalization~\cite{batchnorm} proposes a network re-parametrization applied to neural network preactivations that takes a step towards reducing
-internal covariate shift. Batch normalization] approximates the
+internal covariate shift. Batch normalization approximates the
 whitening by standardizing the preactivation using the statistics of the current batch..
 The batch normalizing transform is as follows:
 
