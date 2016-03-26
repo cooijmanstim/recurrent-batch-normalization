@@ -258,8 +258,7 @@ This view suggests that the statistics used for normalization should be shared a
 However, we have observed that statistics of LSTM activations
  are usually varying  through the different timesteps. As Figure~\ref{fig:popstat_stationarity}  shows, activation statistics in a LSTM tend to go through an initial transient before converging to a stationary distribution.
 Estimating the statistics globally over time mights therefore discard
-important information about the initial transient phase,
-as the distribution of activations during the first few timesteps is very different from the stationary distribution. We did observe in practice that using shared statistics hurts the model performance and slowdown the
+important information about the initial transient phase as the distribution of activations during the first few timesteps is very different from the stationary distribution. We did observe in practice that using shared statistics hurts the model performance and slowdown the
 training convergence.
 Estimating the statistics independently at each timestep works best.
 
