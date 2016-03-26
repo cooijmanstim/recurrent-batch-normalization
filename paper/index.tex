@@ -201,7 +201,14 @@ Batch normalizing some hidden layer's activation ensures that its mean and varia
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
-\section{Recurrent batch normalization}
+\begin{figure}
+\center
+\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
+\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
+\label{fig:popstat_stationarity}
+\end{figure}
+
+\section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
 This section introduces a re-parametrization of LSTM that takes advantage
@@ -232,16 +239,16 @@ We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 %% There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
 %% We find that we need to normalize these terms separately before adding them up.
 %% This gives the model better control over the relative contribution of the terms.
+In our formulation, we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
+There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
+Normalizing these terms individually gives the model better control over the relative contribution of the terms
+Indeed, it allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
 
-We normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
-This allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
 To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
 
 
-
-%% FIXME population statistics:
 The parameters in an unrolled RNN are shared across layers.
 This suggests that the statistics used for normalization should be shared as well.
 However, we have found that estimating the statistics independently at each timestep works best.
@@ -254,19 +261,12 @@ However, thanks to the stationarity of the activation distribution (cf. Figure~\
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
-[there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
-[additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
-
-
+%% [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
+%% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
 
 During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
 During inference we use estimates obtained by averaging the minibatch estimates over the training set.
 
-
-
-
-%% FIXME develop a little bit
-%% Speak about the population statistics
 
 
 
@@ -322,14 +322,6 @@ For small values of $\gamma$ the norm is nearly constant.
 
 %%% Find better title
 \subsection{Model Specification}
-
-
-\begin{figure}
-\center
-\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
-\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
-\label{fig:popstat_stationarity}
-\end{figure}
 
 
 A RNN can be ``unrolled'' and viewed as a feedforward neural network.
