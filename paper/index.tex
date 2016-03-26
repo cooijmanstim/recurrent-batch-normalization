@@ -167,16 +167,18 @@ This carefully controlled interaction with the cell is what allows the LSTM to r
 
 \subsection{Batch normalization}
 
-%% Internal Covariate Shift
-In deep neural network, an given layer $l$ receives input samples from a distribution that is defined by the layers below $l$.
-As we update the network parameters, this distribution can vary during the course of training.
-The change in the distributions of layer $l$ inputs presents a problem because the layer need to continuously adapt to the new distribution
-This distribution variation is called the Internal Covariate Shift~\cite{shimodaira2000improving}.
-Reducing the internal covariate shift should leads  faster training as upper layer does not need to adapt to the distribution change.
+\emph{Covariate shift}~\cite{shimodaira2000improving} is a phenomenon in machine learning where
+the features presented to a model change in distribution during the course of training.
+In order for learning to succeed in the presence of covariance shift,
+the model's parameters must be adjusted not just to learn the concept at hand
+but also to adapt to the changing distribution of the inputs.
+In deep neural networks, the distribution of activations presented to a layer $l$ is determined by the parameters of the layers below $l$.
+As we update the network parameters during training, this distribution can vary, leading to \emph{internal covariate shift}~\cite{batchnorm}.
 
-Batch Normalization~\cite{batchnorm} proposes a network re-parametrization applied to neural network preactivations that takes a step towards reducing
-internal covariate shift. Batch normalization] approximates the
-whitening by standardizing the preactivation using the statistics of the current batch..
+Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
+It does so by standardizing the activations using statistical estimates of their means and standard deviations.
+However, it does not decorrelate the activations as that involves matrix inversion which is too expensive.
+
 The batch normalizing transform is as follows:
 
 \begin{align}
@@ -187,6 +189,7 @@ The batch normalizing transform is as follows:
 \end{align}
 
 where $\vect{h} \in \reals^d$ is the vector of (pre)activations to be normalized, $\gamma \in \reals^d, \beta \in \reals^d$ are model parameters that determine the mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ is a regularization hyperparameter.
+The division should be understood to proceed elementwise.
 
 At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{h})$ are estimated by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
