@@ -123,10 +123,7 @@ an RNN defines a sequence of hidden states $h_t$ according to
   \mat{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b}),
 \end{eqnarray}
 where $\mat{W}_h \in \reals^{d_h \times d_h}, \mat{W}_x \in \reals^{d_x \times d_h}, \vect{b} \in \reals^{d_h}$
-
-% I've put this back because I believe we do need to say something about the initial state -- tim
-and the initial state $\vect{h}_0 \in \reals^{d_h}$
-
+and the initial state $\vect{h}_0 \in \reals^{d_h}$ % I've put this back because I believe we do need to say something about the initial state -- tim
 are model parameters.
 A popular choice for the activation function $\phi$ is $\tanh$.
 
@@ -151,10 +148,13 @@ In particular in case of gradient vanishing, errors of a given state will not in
  \vect{b}
  \\
 \vect{c}_t &= &\sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
-\sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+\sigma(\tilde{\vect{i}}_t) \ewprod \tanh(\tilde{\vect{g}_t}) \\
 \vect{h}_t &= &\sigma(\tilde{\vect{o}}_t) \ewprod \tanh(\vect{c}_t),
 \end{eqnarray}
-where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$ and $\sigma$ is the sigmoid non-linearity model parameters. The $\ewprod$ operator denotes the Hadamard product.
+where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$
+and the initial states $\vect{h}_0 \in \reals^{d_h}, \vect{c}_0 \in \reals^{d_h}$ % I've put this back because I believe we do need to say something about the initial state -- tim
+are model parameters.
+$\sigma$ is the logistic function, and the $\ewprod$ operator denotes the Hadamard product.
 
 LSTM has an  additional memory \emph{cell} state $\vect{c}_t$ whose update is nearly linear which would
 allow the gradient to flow more easily through time.
