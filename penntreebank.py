@@ -95,12 +95,11 @@ class PTB(fuel.datasets.Dataset):
         if self.which_set == "train":
             # choose an offset to get some data augmentation by not always chopping
             # the examples at the same point.
-            # +1 to be consistent with self.num_examples.
-            offset = 1 + np.random.randint(self.length)
+            offset = np.random.randint(self.length)
         # none of this should copy
         data = self.data[offset:]
         # reshape to nonoverlapping examples
-        data = (self.data[:self.num_examples * self.length]
+        data = (data[:self.num_examples * self.length]
                 .reshape((self.num_examples, self.length, self.data.shape[1])))
         # return the data so we will get it as the "state" argument to get_data
         return data
