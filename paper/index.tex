@@ -99,7 +99,6 @@ because of the repeated application of the batchnorm scale and shift parameters 
  However, RNNs are deepest in the time direction. Therefore, RNNs would  benefit the most from a batch-normalization re-parameterization applied between the hidden-to-hidden transitions.
 
 
-%% DO we keep RNN?
 Contrary to those previous works, our findings shows that it is indeed possible to apply batch-normalization to hidden-to-hidden transition of recurrent models. In particular, we propose a re-parametrization of LSTM network using batch normalization and demonstrate that it can be used in to speed up optimization and improve generalization.
 In addition, we show that batch-normalization provide a way of controlling the saturating  regime of the $\tanh$ activation function in LSTM.
 Using batch-normalization, we can make the  $\tanh$ activation less likely
@@ -109,6 +108,7 @@ We evaluate our proposal on several sequential problems and shows that our
 LSTM re-parametrization consistently outperforms the LSTM baseline on all the tasks, while being faster to converge. In particular, we achieve state-of-art-performance on Sequential-MNIST~\cite{le2015simple} and FIXME.
 
 
+%% FIXME add section 4
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
 In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
 We show in Section~\ref{sec:experiments} our evaluations of the proposed re-parameterization on a variety of tasks.
