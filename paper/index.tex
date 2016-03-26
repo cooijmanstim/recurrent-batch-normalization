@@ -178,8 +178,8 @@ the features presented to a model change in distribution during the course of tr
 In order for learning to succeed in the presence of covariance shift,
 the model's parameters must be adjusted not just to learn the concept at hand
 but also to adapt to the changing distribution of the inputs.
-In deep neural networks, the distribution of activations presented to a layer $l$ is determined by the parameters of the layers below $l$.
-As we update the network parameters during training, this distribution can vary, leading to \emph{internal covariate shift}~\cite{batchnorm}.
+In deep neural networks, this problem manifests as \emph{internal covariance shift}~\cite{batchnorm},
+where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 
 Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
 It does so by standardizing the activations using statistical estimates of their means and standard deviations.
