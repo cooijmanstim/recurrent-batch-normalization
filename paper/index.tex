@@ -205,18 +205,13 @@ Batch normalizing some hidden layer's activation ensures that its mean and varia
 Applying this on every layer effectively decouples each layer's parameters from those of other layers, leading to a better-conditioned optimization problem.
 Deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
-\begin{figure}
-\center
-\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
-\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
-\label{fig:popstat_stationarity}
-\end{figure}
 
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
 This section introduces a re-parametrization of LSTM that takes advantage
 of Batch Normalization. Contrary to previous works~\cite{cesar, baidu}, we leverage of batch normalization in both input-to-hidden and hidden-to-hidden transformation.
+
 
 
 We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
@@ -251,7 +246,12 @@ Indeed, it allows the model to control the contribution of the two independently
 To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
-
+\begin{figure}
+\center
+\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
+\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
+\label{fig:popstat_stationarity}
+\end{figure}
 
 The parameters in an unrolled RNN are shared across layers.
 This suggests that the statistics used for normalization should be shared as well.
