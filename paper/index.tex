@@ -209,12 +209,12 @@ Deep neural networks trained with batch normalization converge significantly fas
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
-This section introduces a re-parametrization of LSTM that takes advantage
+This section introduces a reparametrization of LSTM that takes advantage
 of Batch Normalization. Contrary to previous works~\cite{cesar, baidu}, we leverage of batch normalization in both input-to-hidden and hidden-to-hidden transformation.
 
 
 
-We introduce the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
+We propose to leverage the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ in the LSTM as follows:
 
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -253,11 +253,15 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 \label{fig:popstat_stationarity}
 \end{figure}
 
-The parameters in an unrolled RNN are shared across layers.
-This suggests that the statistics used for normalization should be shared as well.
-However, we have found that estimating the statistics independently at each timestep works best.
-With batch normalization, the activations rapidly converge to a stationary distribution (see Figure~\ref{fig:popstat_stationarity}), so independent estimation does not hurt performance.
-Indeed, we find that sharing statistics does hurt performance, as the distribution of activations during the first few timesteps is very different from the stationary distribution.
+The parameters in an unrolled LSTM are shared across layers.
+This view suggests that the statistics used for normalization should be shared as well across time.
+However, we have observed that statistics of LSTM activations
+ are usually varying  through the different timesteps. As Figure~\ref{fig:popstat_stationarity}  shows, activation statistics in a LSTM tend to go through an initial transient before converging to a stationary distribution.
+Estimating the statistics globally over time mights therefore discard
+important information about the initial transient phase,
+as the distribution of activations during the first few timesteps is very different from the stationary distribution. We did observe in practice that using shared statistics hurts the model performance and slowdown the
+training convergence.
+Estimating the statistics independently at each timestep works best.
 
 The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
 This poses a problem if we want to estimate the population statistics for different timesteps independently.
