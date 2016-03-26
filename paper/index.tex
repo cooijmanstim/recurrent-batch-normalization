@@ -238,33 +238,39 @@ We introduce the batch-normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$
 )
 \end{eqnarray}
 
+
+
 In our formulation, we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 Normalizing these terms individually gives the model better control over the relative contribution of the terms using the $\gamma_h$ and $\gamma_x$ parameters.
 We set $\beta_h = \beta_x = \vect{0}$ to avoid unnecessary redundancy, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
-\begin{figure}
+\begin{figure}[!ht]
 \center
 \includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
 \caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
 \label{fig:popstat_stationarity}
 \end{figure}
 
-During training we estimate the statistics across the minibatch, independently for each timestep.
-At test time we use estimates obtained by averaging the minibatch estimates over the training set.
 
+
+The batch normalization transform relies on the batch statistics to whitten the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
-However, figure~\ref{fig:popstat_stationarity} shows that although the activations do converge to a stationary distribution,
-their statistics during the initial transient differ significantly.
-We have found empirically that simply averaging statistics over time severely degrades performance.
-Instead, we recommend using separate statistics for each timestep.
+However, we empirically observe that although LSTM activations do converge to a stationary distribution, their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
+We have found that simply averaging statistics over time severely degrades performance.
+Instead, we recommend using separate statistics for each timestep to preserve
+information of the initial transient phase in the activation distributions.
 
 Generalizing the model to sequences longer than those seen during training
 is straightforward thanks to the rapid convergence of the activations
-to their steady-state distributions (cf. Figure~\ref{fig:popstat_stationarity}).
+to their steady-state distributions (cf. figure~\ref{fig:popstat_stationarity}).
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps beyond it.
+
+During training we estimate the statistics across the minibatch, independently for each timestep.
+At test time we use estimates obtained by averaging the minibatch estimates over the training set.
+
 
 %% [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
 %% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
@@ -272,7 +278,7 @@ When at test time we need to generalize beyond $T_{max}$, we use the population 
 
 \section{On the Importance of Pre-Activation Variances}
 
-\begin{figure}
+\begin{figure}[!ht]
   \center%
   \subfigure[
 Gradient flow through a batch-normalized $\tanh$ RNN as a function of $\gamma$.
