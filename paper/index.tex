@@ -213,6 +213,14 @@ At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, so as to produce a deterministic prediction.
 
+\begin{figure}[!ht]
+\center
+\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
+\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
+\label{fig:popstat_stationarity}
+\end{figure}
+
+
 
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
@@ -246,14 +254,6 @@ In our formulation, we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ a
 Normalizing these terms individually gives the model better control over the relative contribution of the terms using the $\gamma_h$ and $\gamma_x$ parameters.
 We set $\beta_h = \beta_x = \vect{0}$ to avoid unnecessary redundancy, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
-
-\begin{figure}[!ht]
-\center
-\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
-\caption{Convergence of population statistics to stationary distributions on the Penn Treebank task. Only a random subset of population statistics is shown.}
-\label{fig:popstat_stationarity}
-\end{figure}
-
 
 
 The batch normalization transform relies on batch statistics to standardize the LSTM activations.
