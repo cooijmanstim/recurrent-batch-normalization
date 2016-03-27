@@ -25,24 +25,35 @@ def natstobits(x):
     return x / math.log(2)
 
 colors = "blue green red cyan magenta yellow black white".split()
-for which_set in "train valid".split():
+for which_set in "train valid test".split():
     plt.figure()
-    for situation, kwargs in dict(training=dict(linestyle="dashed"),
-                                  inference=dict(linestyle="solid")).items():
+    for situation, kwargs in [("inference", dict(linestyle="solid")),
+                              ("training",  dict(linestyle="dashed"))]:
         for color, instance in zip(colors, instances):
+            # baseline training/inference performances will be identical
+            if instance["name"] == "LSTM" and situation == "training":
+                continue
+
             label = "%s, %s" % (instance["name"],
-                                dict(training="batch",
-                                     inference="population")[situation])
+                                dict(training="batch statistics",
+                                     inference="population statistics")[situation])
             results = instance["results"][situation][which_set]
             tvs = [(t, v["cross_entropy"]) for t, v in results.items()]
             time, value = zip(*tvs)
+
+            # don't care about result of length 50 as we're training on 100 now
+            assert time[0] == 50
+            time = time[1:]
+            value = value[1:]
+
             value = list(map(natstobits, value))
             plt.plot(time, value, label=label, c=color, **kwargs)
             #plt.yscale("log")
-    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.title(which_set + " set")
-    plt.xlabel("sequence length (trained on 50)")
-    plt.ylabel("bits per character")
+    #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.legend()
+    #plt.title("performance on slices of the " + which_set + " string")
+    plt.xlabel("sequence length")
+    plt.ylabel("mean bits per character")
 
 for instance in instances:
     print "bpc on full test", instance["name"], natstobits(instance["results"]["proper_test"]["cross_entropy"])

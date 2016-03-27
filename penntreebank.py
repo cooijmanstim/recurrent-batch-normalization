@@ -78,21 +78,20 @@ class PTB(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
-    def __init__(self, which_set, length, overlapping=False):
-        assert not overlapping
+    def __init__(self, which_set, length, augment=False):
         self.which_set = which_set
         self.length = length
-        self.overlapping = overlapping
+        self.augment = augment
         self.data = get_data(which_set)
         self.num_examples = int(len(self.data) / self.length)
-        if self.which_set == "train":
+        if self.augment:
             # -1 so we have one self.length worth of room for augmentation
             self.num_examples -= 1
         super(PTB, self).__init__()
 
     def open(self):
         offset = 0
-        if self.which_set == "train":
+        if self.augment:
             # choose an offset to get some data augmentation by not always chopping
             # the examples at the same point.
             offset = np.random.randint(self.length)
@@ -110,8 +109,8 @@ class PTB(fuel.datasets.Dataset):
             return (state.take(request, 0),)
         return (state[request],)
 
-def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
-    dataset = PTB(which_set, length=length, overlapping=overlapping)
+def get_stream(which_set, batch_size, length, num_examples=None, augment=False):
+    dataset = PTB(which_set, length=length, augment=augment)
     if num_examples is None or num_examples > dataset.num_examples:
         num_examples = dataset.num_examples
     stream = fuel.streams.DataStream.default_stream(
@@ -471,7 +470,7 @@ if __name__ == "__main__":
         data_stream=None, after_epoch=True))
 
     # performance monitor
-    for situation in "training".split(): #"training inference".split():
+    for situation in "training inference".split():
         for which_set in "train valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)
@@ -498,6 +497,6 @@ if __name__ == "__main__":
         PrintingTo("log"),
     ])
     main_loop = MainLoop(
-        data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=args.length),
+        data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=args.length, augment=True),
         algorithm=algorithm, extensions=extensions, model=model)
     main_loop.run()

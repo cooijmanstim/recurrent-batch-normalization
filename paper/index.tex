@@ -298,7 +298,7 @@ High variance causes saturation, which decreases the expected derivative.
   \caption{
 Influence of pre-activation variance on gradient propagation.
 }
-  \label{figure:DCNtradeoff}
+  \label{fig:variance}
 \end{figure}
 
 Although batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
@@ -395,19 +395,17 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 
 \subsection{Character-level Penn Treebank}
 
-We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\cite{penntreebank}.
-We follow the setup of~\cite{krueger}, dividing the training set into nonoverlapping subsequences of length 50.
+We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\cite{penntreebank}
+according to the train/valid/test partition of~\cite{mikolov2012subword}.
+For training we segment the training sequence into examples of length 100.
+The training sequence does not cleanly divide by 100, so for each epoch we randomly crop a subsequence that does and segment that instead.
+
 Our baseline is an LSTM with 1000 units.
 We use stochastic gradient descent on minibatches of size 100,
-with gradient clipping at 1.0 and step rule determined by RMSProp~\cite{rmsprop}
-with learning rate 0.1 and momentum 0.9.
+with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
+with learning rate 0.002.
 We use orthogonal initialization for all weight matrices.
 The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
-
-%TODO move the repeat-population-statistics technicalities here
-
-We were unable to reproduce the baseline reported in~\cite{krueger} and so are unable to compare directly to their results.
-However, we show that batch normalizing our best baseline enables it to train faster and generalize better.
 
 %\begin{figure}
 %\center
@@ -415,6 +413,24 @@ However, we show that batch normalizing our best baseline enables it to train fa
 %\caption{Bits-per-character on the validation set for Penn Treebank during training.}
 %\label{fig:ptb_valid}
 %\end{figure}
+
+\begin{figure}
+  \center%
+  \subfigure[
+    Performance in bits-per-character on length-100 subsequences of the Penn Treebank
+    validation sequence during training.
+]{%
+    \label{fig:ptb_valid}
+    \includegraphics[width=.45\textwidth]{figures/ptb_valid.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+    Generalization to longer subsequences (of the Penn Treebank test sequence)
+]{%
+    \label{fig:ptb_lengths}
+    \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
+  }
+\end{figure}
 
 \begin{table}
 \center
@@ -424,10 +440,12 @@ However, we show that batch normalizing our best baseline enables it to train fa
   LSTM~\cite{graves2013generating} & 1.26
 \footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
 \\
+  HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
   LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
+  ME n-gram~\cite{mikolov2012subword} & 1.37 \\
   \hline
-  LSTM & NaN \\
-  BN-LSTM & \textbf{NaN} \\
+  LSTM & 1.38 \\
+  BN-LSTM & 1.32 \\
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test string.}
 \label{tab:ptb_test}
@@ -497,7 +515,7 @@ Applying batch normalization in the attention computations as well (``BN-everywh
 Experiments were conducted using the Theano~\cite{theano1}~\cite{theano2} and Blocks and Fuel~\cite{blocks} libraries.
 [how to acknowledge use of cluster?]
 We thank Çağlar Gülçehre for sharing his implementation of Attentive Reader and for helping us with experiments,
-and David Krueger, Ishmael Belghazi and Saizheng Zhang for helpful discussions.
+and David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
 \bibliographystyle{nips2015}
