@@ -264,7 +264,7 @@ Generalizing the model to sequences longer than those seen during training
 is straightforward thanks to the rapid convergence of the activations
 to their steady-state distributions (cf. Figure~\ref{fig:popstat_stationarity}).
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
-When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
+When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps beyond it.
 
 %% [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
 %% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
