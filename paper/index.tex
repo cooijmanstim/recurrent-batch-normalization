@@ -285,28 +285,22 @@ During inference we use estimates obtained by averaging the minibatch estimates 
 
 \section{On the Importance of Pre-Activation Variances}
 
-%% Unrolled RNNs are usually much deeper than typical feedforward networks.
-%% Rather than normalizing activations to have standard deviation 1, we normalize to standard deviation 0.1.
-%% This avoids saturating the nonlinearities and enables better flow of gradients.
-%% Indeed, we found that normalizing to unit variance caused the gradient to vanish rapidly.
-%% [yet explode in LSTM...]
-
 \begin{figure}
   \center%
-  \subfigure[
-Empirical expected derivative of $\tanh$ nonlinearity as a function of input variance.
-High variance causes saturation, which decreases the expected derivative.
-]{%
-    \label{fig:tanh_grad}
-    \includegraphics[width=.45\textwidth]{figures/tanh_grad.pdf}
-  }%
-  \hspace{2mm}%
   \subfigure[
 Gradient flow through a batch-normalized $\tanh$ RNN as a function of $\gamma$.
 High variance causes gradient vanishing.
 ]{%
     \label{fig:rnn_grad_prop}
     \includegraphics[width=.45\textwidth]{figures/rnn_grad_prop.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+Empirical expected derivative of $\tanh$ nonlinearity as a function of input variance.
+High variance causes saturation, which decreases the expected derivative.
+]{%
+    \label{fig:tanh_grad}
+    \includegraphics[width=.45\textwidth]{figures/tanh_grad.pdf}
   }
   \caption{
 Influence of pre-activation variance on gradient propagation.
@@ -314,20 +308,25 @@ Influence of pre-activation variance on gradient propagation.
   \label{figure:DCNtradeoff}
 \end{figure}
 
-In section we develop the observation that high-variance pre-activations tend to saturate sigmoid nonlinearities.
-Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
-High variance input is more likely to be in the saturating regime where the derivative is small,
-whereas low variance input is more likely to be in the linear regime around the origin.
+Although batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
+common practice is to normalize to unit variance.
+We suspect that the previous difficulties with recurrent batch normalization reported in the literature~\cite{cesar,baidu}
+are largely due to improper initialization of the batch normalization parameters, and $\gamma$ in particular.
+In this section we demonstrate the impact of $\gamma$ on gradient flow.
 
-Batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
-but the common practice of normalizing to unit variance causes gradient to vanish in recurrent and very deep feedforward networks.
-In Figure~\ref{fig:rnn_grad_prop} we demonstrate how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
+In Figure~\ref{fig:rnn_grad_prop} we show how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
 Since backpropagation operates in reverse, the plot is best read from right to left.
 The quantity plotted is the norm of the gradient of the loss with respect to the hidden states.
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-% TODO: make lstm plot with baseline pre-activation variances
+Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
+When the input variance is low, the input tends to be close to the origin where the derivative is close to 1.
+As the variance increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
+At unit variance, the expected derivative is much smaller than 1.
+We conjecture that this is what causes the gradient to vanish.
+
+% include lstm grad plot and speculate...?
 
 \section{Experiments}
 \label{sec:experiments}
