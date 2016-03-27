@@ -262,7 +262,7 @@ Instead, we recommend using separate statistics for each timestep.
 
 Generalizing the model to sequences longer than those seen during training
 is straightforward thanks to the rapid convergence of the activations
-to their steady-state distirbutions (cf. Figure~\ref{fig:popstat_stationarity}).
+to their steady-state distributions (cf. Figure~\ref{fig:popstat_stationarity}).
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
