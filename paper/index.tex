@@ -331,19 +331,22 @@ We conjecture that this is what causes the gradient to vanish.
 \end{figure}
 
 
-We evaluate recurrent batch normalization on a modified version of the MNIST dataset, suggested by~\cite{le2015simple}.
-Recurrent models are fed MNIST pixels sequentially and have to output at the end of the sequence the corresponding MNIST label.
-We consider two sequentall tasks, MNIST and $p$-(ermuted)MNIST, with different pixel ordering, MNIST considers the pixels from left to right, while $p$-MNIST uses and random ordering of the pixels.
-As model, we consider a LSTM using $100$ hidden units. A softmax classifier
-is applied on the final hidden representation.
-LSTM relies on orthogonal initialization for the weight matrix, except for the hidden-to-hidden weight matrix that used identity initiliazation, as we observe better generalization performance with this
-initiliaziation for this tasks.
-The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and a decay rate of $0.9$. We apply gradient clipping at 1 to avoid exploding gradients.
+We evaluate our batch-normalized LSTM on a sequential version of the MNIST classification task~\cite{le2015simple}.
+The model processes each image one pixel at a time and finally predicts the label.
+We consider both sequential MNIST tasks from~\cite{le2014simple}, MNIST and permuted MNIST ($p$MNIST).
+In MNIST, the pixels are processed from left to right, top to bottom.
+In $p$MNIST the pixels are processed in a fixed random order.
 
-The initial states $\vect{h}_0$ are independent of the input and thus have zero variance.
-This problem is exacerbated in unnatural data such as MNIST and various pathological tasks, where some features are constant across the data.
-In the sequential MNIST task in particular, the variance is typically exactly zero for the first hundred or so time steps, as the upper pixels are almost always black.
-Normalizing these zero-variance activations involves division by a very small number at many timesteps, which causes the gradient to explode.
+Our baseline consists of an LSTM with 100 hidden units, with a softmax classifier to produce a prediction from the final hidden state.
+We use orthogonal initialization for all weight matrices, except for the hidden-to-hidden weight matrix which we initialize to be the identity matrix,
+as this yields better generalization performance on this task.
+The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and $0.9$ momentum.
+We apply gradient clipping at 1 to avoid exploding gradients.
+
+The in-order MNIST task poses a unique problem for our model:
+the input for the first hundred or so timesteps is constant across examples since the upper pixels are almost always black.
+This causes the variance of the hidden states to be exactly zero for a long period of time.
+Normalizing these zero-variance activations involves division by a small number at many timesteps, which causes the gradient to explode.
 We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 %[but is that an artifact of classification at the end?]
@@ -353,7 +356,7 @@ Although the normalization amplifies the noise to signal level, we find that it 
 \center
 \small
 \begin{tabular}{c|c|c}
-  & UnPermuted & Permuted\\
+  & MNIST & $p$MNIST \\
   \hline
   TANH-RNN~\cite{le2015simple} & 35.0 & 35.0\\
   $i$RNN~\cite{le2015simple} & 97.0 & 82.0\\
@@ -368,16 +371,18 @@ Although the normalization amplifies the noise to signal level, we find that it 
 
 \end{table}
 
+In Figure~\ref{fig:seqmnist_valid} we show the validation accuracy while training for both LSTM and batch-normalized LSTM (BN-LSTM).
+BN-LSTM converges faster than LSTM on both tasks.
+Additionally, we observe that BN-LSTM generalizes significantly better on $p$MNIST.
+It has been highlighted in~\cite{urnn} that
+$p$MNIST contains many longer term dependencies across pixels than in
+the original pixel ordering, where a lot of structure is local.
+A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this tasks.
+Our results suggest that BN-LSTM is better able to capture these long-term dependencies.
 
-
-Figure~\ref{fig:seqmnist_valid} reports the validation accuracy throught the training of both LSTM and batch-normalized LSTM (BN-LSTM). Figure~\ref{fig:seqmnist_valid} clearly shows recurrent batch normalization eases the model optimization, as batch-normalized LSTM converges faster than the baseline LSTM on both tasks.
-In addition, we observe that batch-normalized LSTM obtain a significant generalization improvement on $p$-MNIST. It has been highlighted in~\cite{urnn}
-that $p$-MNIST creates many longer term dependencies across pixels than in
-the original pixel ordering, where a lot of structure is local. A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this tasks. Results show by using recurrent batch-normalization, we can learn a LSTM that better characterize those long-term dependencies.
-
-
-
-Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for the LSTM and BN-LSTM models using the population statistics. Recurrent batch normalization leds to better test score, especially for $p$-MNIST  where models have to leverage long-term temporal depencies. In addition, Table~\ref{tab:seqmnist_test} shows that our batch normalized LSTM achieves state-of-art on both MNIST and $p$-MNIST.
+Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for LSTM and BN-LSTM using the population statistics.
+Recurrent batch normalization leads to better test score, especially for $p$MNIST where models have to leverage long-term temporal depencies.
+In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM achieves state of the art on both MNIST and $p$MNIST.
 
 \subsection{Character-level Penn Treebank}
 
