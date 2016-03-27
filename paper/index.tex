@@ -460,7 +460,7 @@ on the Penn Treebank test string.
 \label{tab:ptb_test}
 \end{table}
 
-\subsection{text8}
+\subsection{Text8}
 
 We evaluate our model on a second character-level language modeling task on the text8 dataset\footnote{\url{http://mattmahoney.net/dc/textdata}}.
 This dataset is derived from Wikipedia and consists of a string of 100M characters including only alphabetical characters and spaces.
@@ -493,16 +493,6 @@ Table~\ref{tab:text8_test} reports our performance in bits-per-character on the 
 
 \subsection{Teaching Machines to Read and Comprehend}
 
-To demonstrate the generality and practical applicability of our
-re-parameterization, we take an implementation\footnote{The code can be found at \url{https://github.com/caglar/Attentive_reader}}
-of the Attentive Reader model~\cite{attentivereader} and simply replace the LSTM with our
-BN-LSTM.
-Additionally we try a variant where we also introduce batch
-normalization into the attention computations, normalizing each term
-going into the tanh nonlinearities.
-Without any tweaking, we gain dramatic acceleration of training (Figure~\ref{fig:attr_valid}).
-
-[Caglar will write a blurb on how the subset of data is selected]
 
 \begin{figure}
 \center
@@ -514,6 +504,41 @@ Applying batch normalization in the attention computations as well (``BN-everywh
 }
 \label{fig:attr_valid}
 \end{figure}
+
+To demonstrate the generality and practical applicability of our
+reparameterization, we propose to use batch normalized LSTM in
+the Attentive Reader Model~\cite{attentivereader}.
+We take the Attentive Reader model\footnote{we take an existing implementation that can be found at \url{https://github.com/caglar/Attentive_reader}}
+ and simply replace the LSTM with our BN-LSTM reparametrization.
+Additionally we try a variant, named BN-Eveywhere, where we also introduce batch
+normalization into the attention computations, normalizing each term
+going into the $\tanh$ nonlinearities.
+
+%% FIXME model hyperparameters
+Our Attentive Reader LSTM is composed by FIXME hiddent units
+We use stochastic gradient descent on minibatches of size FIXME,
+with gradient clipping at FIXME and step rule determined by Adam~\cite{kingma2014adam}
+with learning rate FIXME.
+We use orthogonal initialization for all weight matrices.
+BN-LSTM and BN-everywhere relies on the exact same settings.
+
+
+
+%% FIXME specify datasets
+We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task
+using a subset of the CNN dataset.
+[Caglar will write a blurb on how the subset of data is selected]
+
+
+Figure~\ref{fig:attr_valid} reports the training and validation accuracies for the different variants of the attentive reader.
+BN-LSTM achieves a dramatic acceleration in term of training convergence compared to the baseline LSTM.
+BN-Everywhere, applying batch normalization in the attention computations as well, also shows a significant
+improvement over BN-LSTM.
+In addition, both BN-LSTM and BN-Everywhere show a generalization benefit, in term of validation accuracy, over the baseline.
+%% FIXME should we add a table for that
+
+
+
 
 \section{Conclusion}
 
