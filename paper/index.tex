@@ -215,12 +215,9 @@ During inference, the statistics are typically estimated based on the entire tra
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
-This section introduces a reparametrization of LSTM that takes advantage
-of Batch Normalization. Contrary to previous works~\cite{cesar, baidu}, we leverage of batch normalization in both input-to-hidden and hidden-to-hidden transformation.
-
-
-
-We propose to leverage the batch normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ in the LSTM as follows:
+This section introduces a reparameterization of LSTM that takes advantage of batch normalization.
+Contrary to previous work~\cite{cesar, baidu}, we leverage batch normalization in both the input-to-hidden \emph{and} the hidden-to-hidden transformations.
+We introduce the batch-normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
 
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -231,25 +228,19 @@ We propose to leverage the batch normalizing transform $\mathrm{BN}(\cdot; \gamm
 \end{array}\right)
  &=&
  \mathrm{BN} (\mat{W}_h \vect{h}_{t-1}; \gamma_h, \beta_h) +
- \mathrm{BN} (\mat{W}_x \vect{x}_t    ; \gamma_x, \beta_x) +
+ \mathrm{BN} (\mat{W}_x \vect{x}_t   ; \gamma_x, \beta_x) +
  \vect{b}
 \\
 \vect{c}_t &=& \sigma(\tilde{\vect{f}}_t) \ewprod \vect{c}_{t-1} +
-              \sigma(\tilde{\vect{i}}_t) \ewprod \mathrm{tanh}(\tilde{\vect{g}_t}) \\
+               \sigma(\tilde{\vect{i}}_t) \ewprod \tanh(\tilde{\vect{g}_t}) \\
 \vect{h}_t &=& \sigma(\tilde{\vect{o}}_t) \ewprod \tanh(
  \mathrm{BN} (\vect{c}_t; \gamma_c, \beta_c)
 )
 \end{eqnarray}
 
-%% There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-%% We find that we need to normalize these terms separately before adding them up.
-%% This gives the model better control over the relative contribution of the terms.
 In our formulation, we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
-There is three-way interaction; each layer receives as input not just the activations of the layer below it but also the next element of the input sequence.
-Normalizing these terms individually gives the model better control over the relative contribution of the terms
-Indeed, it allows the model to control the contribution of the two independently using $\gamma_h$ and $\gamma_x$.
-
-To avoid unnecessary redundancy we set $\beta_h = \beta_x = \vect{0}$, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
+Normalizing these terms individually gives the model better control over the relative contribution of the terms using the $\gamma_h$ and $\gamma_x$ parameters.
+We set $\beta_h = \beta_x = \vect{0}$ to avoid unnecessary redundancy, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
 In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization on the cell states.
 
 \begin{figure}
@@ -259,28 +250,24 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 \label{fig:popstat_stationarity}
 \end{figure}
 
-The parameters in an unrolled LSTM are shared across layers.
-This view suggests that the statistics used for normalization should be shared as well across time.
-However, we have observed that statistics of LSTM activations
- are usually varying  through the different timesteps. As Figure~\ref{fig:popstat_stationarity}  shows, activation statistics in a LSTM tend to go through an initial transient before converging to a stationary distribution.
-Estimating the statistics globally over time mights therefore discard
-important information about the initial transient phase as the distribution of activations during the first few timesteps is very different from the stationary distribution. We did observe in practice that using shared statistics hurts the model performance and slowdown the
-training convergence.
-Estimating the statistics independently at each timestep works best.
+During training we estimate the statistics across the minibatch, independently for each timestep.
+At test time we use estimates obtained by averaging the minibatch estimates over the training set.
 
-The depth depends on the length of the input sequence $\mat{X} = (\vect{x}_t)$, which is typically not constant.
-This poses a problem if we want to estimate the population statistics for different timesteps independently.
-However, thanks to the stationarity of the activation distribution (cf. Figure~\ref{fig:popstat_stationarity}) we can use the estimates of earlier timesteps for later timesteps.
+It would seem natural to share the statistics that are used for normalization across time,
+just as recurrent neural networks share their parameters over time.
+However, figure~\ref{fig:popstat_stationarity} shows that although the activations do converge to a stationary distribution,
+their statistics during the initial transient differ significantly.
+We have found empirically that simply averaging statistics over time severely degrades performance.
+Instead, we recommend using separate statistics for each timestep.
+
+Generalizing the model to sequences longer than those seen during training
+is straightforward thanks to the rapid convergence of the activations
+to their steady-state distirbutions (cf. Figure~\ref{fig:popstat_stationarity}).
 For our experiments we estimate the population statistics separately for each timestep $1, \ldots, T_{max}$ where $T_{max}$ is the length of the longest training sequence.
 When at test time we need to generalize beyond $T_{max}$, we use the population statistic of time $T_{max}$ for all time steps following it.
 
 %% [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
 %% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
-
-During training we estimate the statistics needed for batch normalization across the minibatch, and independently for each timestep.
-During inference we use estimates obtained by averaging the minibatch estimates over the training set.
-
-
 
 
 \section{On the Importance of Pre-Activation Variances}
