@@ -209,7 +209,7 @@ The division should be understood to proceed elementwise.
 
 At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{h})$ are estimated by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
-During inference, the statistics are typically estimated based on the entire training set, to produce a deterministic prediction.
+During inference, the statistics are typically estimated based on the entire training set, so as to produce a deterministic prediction.
 
 
 \section{Batch-Normalized LSTM}
