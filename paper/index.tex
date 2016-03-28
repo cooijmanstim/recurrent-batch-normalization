@@ -14,6 +14,8 @@
 \usepackage{multirow}
 \usepackage{caption} 
 \usepackage{url}
+\usepackage{booktabs}
+\renewcommand{\arraystretch}{1.2}
 %\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
 
 \title{Recurrent Batch Normalization}
@@ -364,16 +366,18 @@ Although the normalization amplifies the noise to signal level, we find that it 
 
 \begin{table}
 \center
-\begin{tabular}{c|c|c}
-  & MNIST & $p$MNIST \\
-  \hline
+\begin{tabular}{@{}lcc@{}}
+  \toprule
+  \bf Model & \bf MNIST & \bf $p$MNIST \\
+  \midrule
   TANH-RNN~\cite{le2015simple} & 35.0 & 35.0\\
   $i$RNN~\cite{le2015simple} & 97.0 & 82.0\\
   $u$RNN~\cite{urnn} & 95.1 & 91.4\\
   $s$TANH-RNN~\cite{zhang2016architectural} & 98.1 & 94.0\\
-  \hline
-  LSTM & 98.9 & 90.2\\
-  BN-LSTM & \textbf{99.0} & \textbf{95.4}\\
+  \midrule
+  LSTM (ours) & 98.9 & 90.2\\
+  BN-LSTM (ours) & \textbf{99.0} & \textbf{95.4}\\
+  \bottomrule
 \end{tabular}
 \caption{Accuracy obtained on the test set for the pixel by pixel MNIST classification tasks}
 \label{tab:seqmnist_test}
@@ -434,18 +438,19 @@ The setup for the batch-normalized LSTM is the same in all respects except for t
 
 \begin{table}
 \center
-\begin{tabular}{c|c}
-  & Penn Treebank \\
-  \hline
-  LSTM~\cite{graves2013generating} & 1.26
-\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
+\begin{tabular}{@{}lc@{}}
+  \toprule
+  \bf Model & \bf Penn Treebank \\
+  \midrule
+  LSTM~\cite{graves2013generating} & \bf 1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
 \\
   HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
   LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
   ME n-gram~\cite{mikolov2012subword} & 1.37 \\
-  \hline
-  LSTM & 1.38 \\
-  BN-LSTM & 1.32 \\
+  \midrule
+  LSTM (ours) & 1.38 \\
+  BN-LSTM (ours) & 1.32 \\
+  \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test string.}
 \label{tab:ptb_test}
@@ -455,23 +460,24 @@ Table~\ref{tab:ptb_test} reports our performance in bits-per-character on the Pe
 
 \subsection{text8}
 
-We evaluate our model on a second character-level language modeling task on the text8 dataset
-\footnote{\url{http://mattmahoney.net/dc/textdata}}.
+We evaluate our model on a second character-level language modeling task on the text8 dataset\footnote{\url{http://mattmahoney.net/dc/textdata}}.
 This dataset is derived from Wikipedia and consists of a string of 100M characters including only alphabetical characters and spaces.
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
 
 \begin{table}
 \center
-\begin{tabular}{c|c}
-  & text8 \\
-  \hline
+\begin{tabular}{@{}lc@{}}
+  \toprule
+  \bf Model & \bf text8 \\
+  \midrule
   $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
   HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
   skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
-  \hline
-  LSTM & NaN \\
-  BN-LSTM & \textbf{NaN} \\
+  \midrule
+  LSTM (ours) & NaN \\
+  BN-LSTM (ours) & \textbf{NaN} \\
+  \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the text8 test string.}
 \label{tab:text8_test}
@@ -486,8 +492,7 @@ Table~\ref{tab:text8_test} reports our performance in bits-per-character on the 
 \subsection{Teaching Machines to Read and Comprehend}
 
 To demonstrate the generality and practical applicability of our
-re-parameterization, we take an implementation
-\footnote{The code can be found at \url{https://github.com/caglar/Attentive_reader}}
+re-parameterization, we take an implementation\footnote{The code can be found at \url{https://github.com/caglar/Attentive_reader}}
 of the Attentive Reader model~\cite{attentivereader} and simply replace the LSTM with our
 BN-LSTM.
 Additionally we try a variant where we also introduce batch
