@@ -254,7 +254,7 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 
 
 
-The batch normalization transform relies on batch statistics to whitten the LSTM activations.
+The batch normalization transform relies on batch statistics to standardize the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
 However, we have found that simply averaging statistics over time severely degrades performance.
