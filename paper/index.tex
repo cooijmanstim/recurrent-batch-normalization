@@ -501,6 +501,7 @@ Our model achieves state of the art.
 Error rate on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
 BN-LSTM converges much faster than the baseline LSTM.
 Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
+As detailed in the text, the theoretical lower bound on the error rate on this task is $47\%$.
 }
 \label{fig:attr_valid}
 \end{figure}
@@ -517,10 +518,13 @@ We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 10 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate $8 \times 10^{-5}$.
 
-%% FIXME specify datasets
 We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task using the CNN corpus, with placeholders to replace the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
-% We replaced all numbers in the dataset with a particular NUM token and for the words with frequency of 1 we assigned to UNK token.
-However contrary to~\cite{attentivereader},  we upper bounded the number of sentences to be 4 in passages from the the question/passages pairs, by performing a string matching. We rank the sentences in the text according to the normalized-score obtained with the string-match and use only the top-4 sentences for each passage in the dataset. We have applied the same procedure for training, validation and the test sets.  After this sentence-selection heuristic, on the validation-set, we obtain has $57\%$ recall.  As a matter of fact, only $57\%$ of the passage and question pairs contains the answer.
+However contrary to~\cite{attentivereader}, we limit the number of sentences in each passage to 4 in order to save computation.
+We choose which sentences to keep by performing a string matching between the question and the passage.
+We rank the sentences in the text according to the string matching score and use only the top 4 sentences for each passage in the dataset.
+The training, validation and test sets are all preprocessed using this same procedure.
+After this procedure, the validation set has a recall of $57\%$ -- the passage contains the answer in only $57\%$ of the passage/question pairs.
+This puts an upper bound on the accuracy that can be achieved.
 
 During the training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch. We use the whole vocabulary for the input and the answer which consists of 65829 unique words.
 
