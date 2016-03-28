@@ -4,7 +4,8 @@ from collections import OrderedDict
 from blocks.serialization import load
 import util
 
-from penntreebank import PTB, get_stream
+# to make unpickling work :-(
+from penntreebank import *
 
 # argument: path to a checkpoint file
 main_loop = load(sys.argv[1])
@@ -20,8 +21,11 @@ old_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
 
 # baseline doesn't need all this
 if updates:
-    # -_-
-    nbatches = len(list(main_loop.data_stream.get_epoch_iterator()))
+    train_stream = get_stream(which_set="train",
+                              batch_size=100,
+                              augment=False,
+                              length=100)
+    nbatches = len(list(train_stream.get_epoch_iterator()))
 
     # destructure moving average expression to construct a new expression
     new_updates = []
@@ -44,7 +48,7 @@ if updates:
     # FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
     estimate_fn = theano.function(main_loop.algorithm.inputs, [],
                                   updates=new_updates, on_unused_input="warn")
-    for batch in main_loop.data_stream.get_epoch_iterator(as_dict=True):
+    for batch in train_stream.get_epoch_iterator(as_dict=True):
         estimate_fn(**batch)
 
 new_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
@@ -62,9 +66,10 @@ for situation in "training inference".split():
         results[situation][which_set] = OrderedDict(
             (length, evaluator.evaluate(get_stream(
                 which_set=which_set,
-                batch_size=1000,
+                batch_size=100,
+                augment=False,
                 length=length)))
-            for length in [50, 100, 200, 300, 400, 500])
+            for length in [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
 
 results["proper_test"] = evaluator.evaluate(
     get_stream(
