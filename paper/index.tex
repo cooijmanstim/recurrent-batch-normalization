@@ -254,13 +254,13 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 
 
 
-The batch normalization transform relies on the batch statistics to whitten the LSTM activations.
+The batch normalization transform relies on batch statistics to whitten the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
-However, we empirically observe that although LSTM activations do converge to a stationary distribution, their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
-We have found that simply averaging statistics over time severely degrades performance.
-Instead, we recommend using separate statistics for each timestep to preserve
-information of the initial transient phase in the activation distributions.
+However, we have found that simply averaging statistics over time severely degrades performance.
+Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
+Consequently, we recommend using separate statistics for each timestep to preserve
+information of the initial transient phase in the activations.
 
 Generalizing the model to sequences longer than those seen during training
 is straightforward thanks to the rapid convergence of the activations
