@@ -34,9 +34,11 @@ for which_set in "train valid test".split():
             if instance["name"] == "LSTM" and situation == "training":
                 continue
 
-            label = "%s, %s" % (instance["name"],
-                                dict(training="batch statistics",
-                                     inference="population statistics")[situation])
+            label = instance["name"]
+            if instance["name"] == "BN-LSTM":
+                label += ", " + dict(training="batch statistics",
+                                     inference="population statistics")[situation]
+
             results = instance["results"][situation][which_set]
             tvs = [(t, v["cross_entropy"]) for t, v in results.items()]
             time, value = zip(*tvs)

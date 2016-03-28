@@ -92,7 +92,7 @@ Covariate shift is a change in distribution of the inputs to a model.
 This occurs continuously during training of feed-forward neural networks,
 where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 As a result, the upper layers are continually adapting to the shifting input distribution and unable to learn effectively.
-Covariate shift may play an especially important role in recurrent neural networks,
+This \emph{internal} covariate shift~\cite{batchnorm} may play an especially important role in recurrent neural networks,
 which resemble very deep feed-forward networks.
 
 Batch normalization~\cite{batchnorm} is a recently proposed technique for controlling the distributions of feed-forward neural network activations, thereby reducing internal covariate shift.
@@ -183,7 +183,7 @@ and the input gate $\vect{i}_t$ controls the flow of information from the curren
 The output gate $\vect{o}_t$ allows the model to read from the cell.
 This carefully controlled interaction with the cell is what allows the LSTM to robustly retain information for long periods of time.
 
-\subsection{Batch normalization}
+\subsection{Batch Normalization}
 
 \emph{Covariate shift}~\cite{shimodaira2000improving} is a phenomenon in machine learning where
 the features presented to a model change in distribution during the course of training.
@@ -256,13 +256,13 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 
 
 
-The batch normalization transform relies on the batch statistics to whitten the LSTM activations.
+The batch normalization transform relies on batch statistics to standardize the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
-However, we empirically observe that although LSTM activations do converge to a stationary distribution, their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
-We have found that simply averaging statistics over time severely degrades performance.
-Instead, we recommend using separate statistics for each timestep to preserve
-information of the initial transient phase in the activation distributions.
+However, we have found that simply averaging statistics over time severely degrades performance.
+Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
+Consequently, we recommend using separate statistics for each timestep to preserve
+information of the initial transient phase in the activations.
 
 Generalizing the model to sequences longer than those seen during training
 is straightforward thanks to the rapid convergence of the activations
@@ -351,7 +351,7 @@ In $p$MNIST the pixels are processed in a fixed random order.
 
 Our baseline consists of an LSTM with 100 hidden units, with a softmax classifier to produce a prediction from the final hidden state.
 We use orthogonal initialization for all weight matrices, except for the hidden-to-hidden weight matrix which we initialize to be the identity matrix,
-as this yields better generalization performance on this task.
+as this yields better generalization performance on this task for both models.
 The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and $0.9$ momentum.
 We apply gradient clipping at 1 to avoid exploding gradients.
 
@@ -411,12 +411,16 @@ with learning rate 0.002.
 We use orthogonal initialization for all weight matrices.
 The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
 
-%\begin{figure}
-%\center
-%\includegraphics[width=7cm]{figures/ptb_valid.pdf}
-%\caption{Bits-per-character on the validation set for Penn Treebank during training.}
-%\label{fig:ptb_valid}
-%\end{figure}
+We show the learning curves in figure~\ref{fig:ptb_valid}.
+BN-LSTM converges faster and generalizes better than the LSTM baseline.
+Figure~\ref{fig:ptb_lengths} shows the generalization of our model to longer sequences.
+We observe that using the population statistics improves generalization performance,
+which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
+is a viable strategy.
+In table~\ref{tab:ptb_test} we report the performance of the best models
+(in terms of validation performance)
+on the Penn Treebank test string.
+
 
 \begin{figure}
   \center%
@@ -429,7 +433,7 @@ The setup for the batch-normalized LSTM is the same in all respects except for t
   }%
   \hspace{2mm}%
   \subfigure[
-    Generalization to longer subsequences (of the Penn Treebank test sequence)
+    Generalization to longer subsequences (of the Penn Treebank test sequence) using population statistics.
 ]{%
     \label{fig:ptb_lengths}
     \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
@@ -455,8 +459,6 @@ The setup for the batch-normalized LSTM is the same in all respects except for t
 \caption{Bits-per-character on the Penn Treebank test string.}
 \label{tab:ptb_test}
 \end{table}
-
-Table~\ref{tab:ptb_test} reports our performance in bits-per-character on the Penn Treebank test string.
 
 \subsection{text8}
 
