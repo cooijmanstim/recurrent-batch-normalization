@@ -349,7 +349,7 @@ In $p$MNIST the pixels are processed in a fixed random order.
 
 Our baseline consists of an LSTM with 100 hidden units, with a softmax classifier to produce a prediction from the final hidden state.
 We use orthogonal initialization for all weight matrices, except for the hidden-to-hidden weight matrix which we initialize to be the identity matrix,
-as this yields better generalization performance on this task.
+as this yields better generalization performance on this task for both models.
 The model is trained using RMSProp~\cite{rmsprop} with learning rate of $10^{-3}$ and $0.9$ momentum.
 We apply gradient clipping at 1 to avoid exploding gradients.
 
