@@ -407,12 +407,16 @@ with learning rate 0.002.
 We use orthogonal initialization for all weight matrices.
 The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
 
-%\begin{figure}
-%\center
-%\includegraphics[width=7cm]{figures/ptb_valid.pdf}
-%\caption{Bits-per-character on the validation set for Penn Treebank during training.}
-%\label{fig:ptb_valid}
-%\end{figure}
+We show the learning curves in figure~\ref{fig:ptb_valid}.
+BN-LSTM converges faster and generalizes better than the LSTM baseline.
+Figure~\ref{fig:ptb_lengths} shows the generalization of our model to longer sequences.
+We observe that using the population statistics improves generalization performance,
+which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
+is a viable strategy.
+In table~\ref{tab:ptb_test} we report the performance of the best models
+(in terms of validation performance)
+on the Penn Treebank test string.
+
 
 \begin{figure}
   \center%
@@ -425,7 +429,7 @@ The setup for the batch-normalized LSTM is the same in all respects except for t
   }%
   \hspace{2mm}%
   \subfigure[
-    Generalization to longer subsequences (of the Penn Treebank test sequence)
+    Generalization to longer subsequences (of the Penn Treebank test sequence) using population statistics.
 ]{%
     \label{fig:ptb_lengths}
     \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
@@ -450,8 +454,6 @@ The setup for the batch-normalized LSTM is the same in all respects except for t
 \caption{Bits-per-character on the Penn Treebank test string.}
 \label{tab:ptb_test}
 \end{table}
-
-Table~\ref{tab:ptb_test} reports our performance in bits-per-character on the Penn Treebank test string.
 
 \subsection{text8}
 
