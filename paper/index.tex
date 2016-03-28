@@ -111,7 +111,7 @@ character-level language modeling~\cite{mikolov2012subword} on Penn Treebank~\ci
 
 %% FIXME add section 4
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
-In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
+In Section~\ref{sec:recurrent-batch-normalization}, we discuss batch normalization in the recurrent setting.
 Section~\ref{sec:activation-variance} investigates the impact of the batch normalization scale parameter on the gradient back-propagation for
 recurrent models .
 We show in Section~\ref{sec:experiments} our evaluations of the proposed re-parameterization on a variety of tasks.
@@ -164,7 +164,7 @@ In what follows, we focus on the LSTM architecture~\cite{lstm} with recurrent tr
 where $\vect{W}_h \in \reals^{d_h \times 4 d_h}, \vect{W}_x \reals^{d_x \times 4 d_h}, \vect{b} \in \reals^{4 d_h}$
 and the initial states $\vect{h}_0 \in \reals^{d_h}, \vect{c}_0 \in \reals^{d_h}$ % I've put this back because I believe we do need to say something about the initial state -- tim
 are model parameters.
-$\sigma$ is the logistic function, and the $\ewprod$ operator denotes the Hadamard product.
+$\sigma$ is the logistic sigmoid function, and the $\ewprod$ operator denotes the Hadamard product.
 
 The LSTM differs from simple RNNs in that it has an additional memory \emph{cell} $\vect{c}_t$ whose update is nearly linear which allows the gradient to flow back through time more easily.
 In addition, unlike the RNN which overwrites its content at each time-step,
@@ -218,7 +218,7 @@ During inference, the statistics are typically estimated based on the entire tra
 
 This section introduces a re-parameterization of LSTM that takes advantage of batch normalization.
 Contrary to previous work~\cite{cesar, baidu}, we leverage batch normalization in both the input-to-hidden \emph{and} the hidden-to-hidden transformations.
-We introduce the batch-normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
+We introduce the batch-normalizing transform $\mathrm{BN}(\ \cdot\ ; \gamma, \beta)$ into the LSTM as follows:
 
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -411,7 +411,10 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
     \label{fig:ptb_lengths}
     \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
   }
+  \caption{Penn Treebank evaluation}
+  \label{fig:ptb}
 \end{figure}
+
 \begin{table}
   \center
 \begin{minipage}[t]{6.5cm}
@@ -493,7 +496,7 @@ Our model achieves state of the art.
 
 \begin{figure}
 \center
-\includegraphics[width=0.8\textwidth]{figures/attr_valid.pdf}
+\includegraphics[width=0.95\textwidth]{figures/attr_valid.pdf}
 \caption{
 Error rate on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
 BN-LSTM converges much faster than the baseline LSTM.
@@ -542,7 +545,8 @@ and suggest that previous difficulties~\cite{cesar, baidu} were due in large par
 The authors would like to acknowledge the support of the following agencies for
 research funding and computing support: NSERC, Calcul Qu\'{e}bec, Compute Canada,
 the Canada Research Chairs and CIFAR.
-We would also like to thank the developers~\cite{theano2} and Blocks and Fuel~\cite{blocks} libraries,
+We would also like to thank the developers of Theano~\cite{theano2} and the
+Blocks and Fuel~\cite{blocks} libraries,
 for developing such powerful tools for scientific computing.
 We thank Çağlar Gülçehre for sharing his implementation of Attentive Reader and for helping us with experiments,
 and David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.

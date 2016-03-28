@@ -24,7 +24,7 @@ import math
 def natstobits(x):
     return x / math.log(2)
 
-colors = "blue green red cyan magenta yellow black white".split()
+colors = "blue red green cyan magenta yellow black white".split()
 for which_set in "train valid test".split():
     plt.figure()
     for situation, kwargs in [("inference", dict(linestyle="solid")),
@@ -49,7 +49,7 @@ for which_set in "train valid test".split():
             value = value[1:]
 
             value = list(map(natstobits, value))
-            plt.plot(time, value, label=label, c=color, **kwargs)
+            plt.plot(time, value, label=label, c=color, linewidth=3, **kwargs)
             #plt.yscale("log")
     #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.legend()
