@@ -90,7 +90,7 @@ Covariate shift is a change in distribution of the inputs to a model.
 This occurs continuously during training of feed-forward neural networks,
 where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 As a result, the upper layers are continually adapting to the shifting input distribution and unable to learn effectively.
-Covariate shift may play an especially important role in recurrent neural networks,
+This \emph{internal} covariate shift~\cite{batchnorm} may play an especially important role in recurrent neural networks,
 which resemble very deep feed-forward networks.
 
 Batch normalization~\cite{batchnorm} is a recently proposed technique for controlling the distributions of feed-forward neural network activations, thereby reducing internal covariate shift.
