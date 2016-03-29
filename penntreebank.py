@@ -127,12 +127,13 @@ class Parameters(object):
     pass
 
 class BatchNormalization(object):
-    def __init__(self, shape, initial_gamma=1, initial_beta=0, name=None, use_bias=True):
+    def __init__(self, shape, initial_gamma=1, initial_beta=0, name=None, use_bias=True, epsilon=1e-5):
         self.shape = shape
         self.initial_gamma = initial_gamma
         self.initial_beta = initial_beta
         self.name = name
         self.use_bias = use_bias
+        self.epsilon = epsilon
 
     @property
     def parameters(self):
@@ -166,7 +167,7 @@ class BatchNormalization(object):
                 inputs=x,
                 gamma=p.gammas, beta=betas,
                 mean=T.shape_padleft(mean),
-                std=T.shape_padleft(T.sqrt(var + args.epsilon)))
+                std=T.shape_padleft(T.sqrt(var + self.epsilon)))
         return y, mean, var
 
 class LSTM(object):
@@ -178,10 +179,10 @@ class LSTM(object):
         self.nclasses = nclasses
         self.activation = activations[args.activation]
 
-        self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a")
-        self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", use_bias=False)
-        self.bn_p = BatchNormalization((3 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_p", use_bias=False)
-        self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c")
+        self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a", epsilon=args.epsilon)
+        self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", epsilon=args.epsilon, use_bias=False)
+        self.bn_p = BatchNormalization((3 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_p", epsilon=args.epsilon, use_bias=False)
+        self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c", epsilon=args.epsilon)
 
     @property
     def parameters(self):
