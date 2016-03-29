@@ -447,12 +447,12 @@ according to the train/valid/test partition of~\cite{mikolov2012subword}.
 For training we segment the training sequence into examples of length 100.
 The training sequence does not cleanly divide by 100, so for each epoch we randomly crop a subsequence that does and segment that instead.
 
-Our baseline is an LSTM with 1000 units.
+Our baseline is an LSTM with 1000 units, trained to predict the next character using a softmax classifier on the hidden state $h_t$.
 We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate 0.002.
 We use orthogonal initialization for all weight matrices.
-The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
+The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization as detailed in~\ref{sec:recurrent-batch-normalization}.
 
 We show the learning curves in figure~\ref{fig:ptb_valid}.
 BN-LSTM converges faster and generalizes better than the LSTM baseline.
