@@ -507,7 +507,7 @@ Applying batch normalization in the attention computations as well (``BN-everywh
 \end{figure}
 
 To demonstrate the generality and practical applicability of our re-parameterization,
-we explore the use of batch-normalized LSTM in the Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
+we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
 We evaluate two variants.
 The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM re-parameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
