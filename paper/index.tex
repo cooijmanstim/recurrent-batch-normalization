@@ -65,7 +65,7 @@ Recurrent neural network architectures such as LSTM~\cite{lstm} and GRU~\cite{ch
 state-of-the-art performance on a wide range of complex sequential problems including speech recognition~\cite{baidu},
 machine translation~\cite{bahdanau2014neural} and image and video captioning~\cite{xu2015show,yao2015describing}.
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and costly to train.
-Effective optimization of recurrent neural networks is an active area of study~\cite{hessianfree,ollivier}.
+Effective optimization of recurrent neural networks is an active area of study~\cite{pascanudifficulty,hessianfree,ollivier}.
 
 It is known that for deep feed-forward neural networks, covariate shift~\cite{shimodaira2000improving,batchnorm}
 degrades the efficiency of training.
@@ -90,16 +90,18 @@ However, it has been hypothesized~\cite{cesar} that applying batch normalization
 because of exploding gradients due to repeated rescaling.
 
 Our findings run counter to this hypothesis.
-We show that it is possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
+We show that it is both possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
 In particular, we describe a re-parameterization of LSTM that involves batch normalization
 and demonstrate that doing so speeds up optimization and improves generalization.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
 of the batch normalization parameters is crucial to avoiding gradient vanishing.
 
 We evaluate our proposal on several sequential problems and show that our
-LSTM re-parameterization consistently outperforms the LSTM baseline across tasks,
+LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
-In particular, we achieve state-of-the-art performance on Sequential MNIST~\cite{le2015simple}.
+In particular, we achieve state-of-the-art performance on
+Sequential MNIST~\cite{le2015simple} and
+character-level language modeling~\cite{mikolov2012subword} on Penn Treebank~\cite{penntreebank} and text8~\cite{mahoney2009large}.
 
 %% FIXME add section 4
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
@@ -431,8 +433,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
   skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
   \midrule
-  LSTM (ours) & NaN \\
-  BN-LSTM (ours) & \textbf{NaN} \\
+  BN-LSTM (ours) & \textbf{1.39} \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the text8 test string.}
@@ -468,7 +469,7 @@ It shows that our BN-LSTM model compares favorably to state-of-art models.
 
 \subsection{Text8}
 
-We evaluate our model on a second character-level language modeling task on the text8 dataset\footnote{\url{http://mattmahoney.net/dc/textdata}}.
+We evaluate our model on a second character-level language modeling task on the text8 dataset~\cite{mahoney2009large}.
 This dataset is derived from Wikipedia and consists of a string of 100M characters including only alphabetical characters and spaces.
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
