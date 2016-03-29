@@ -65,7 +65,7 @@ Recurrent neural network architectures such as LSTM~\cite{lstm} and GRU~\cite{ch
 state-of-the-art performance on a wide range of complex sequential problems including speech recognition~\cite{baidu},
 machine translation~\cite{bahdanau2014neural} and image and video captioning~\cite{xu2015show,yao2015describing}.
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and costly to train.
-Effective optimization of recurrent neural networks is an active area of study.
+Effective optimization of recurrent neural networks is an active area of study~\cite{hessianfree,ollivier}.
 
 It is known that for deep feed-forward neural networks, covariate shift~\cite{shimodaira2000improving,batchnorm}
 degrades the efficiency of training.
@@ -418,12 +418,15 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   BN-LSTM (ours) & \textbf{1.32} \\
   \bottomrule
 \end{tabular}
-\caption{Bits-per-character on the Penn Treebank test string.}
+\caption{
+Bits-per-character on the Penn Treebank test string.
+\protect\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
+}
 \label{tab:ptb_test}
 \end{minipage}
 \hspace{1cm}
 \begin{minipage}[t]{3.5cm}
-    \begin{tabular}{@{}lc@{}}
+  \begin{tabular}{@{}lc@{}}
   \toprule
   \bf Model & \bf text8 \\
   \midrule
@@ -435,9 +438,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   BN-LSTM (ours) & \textbf{NaN} \\
   \bottomrule
 \end{tabular}
-\caption{
-Bits-per-character on the text8 test string.\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
-}
+\caption{Bits-per-character on the text8 test string.}
 \label{tab:text8_test}
 \end{minipage}
 \end{table}
