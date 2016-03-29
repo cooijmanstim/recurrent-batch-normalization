@@ -5,7 +5,7 @@ def dtanh(x): return 1 - tanh(x)**2
 def sigmoid(x): return 1. / (1. + np.exp(-x))
 def dsigmoid(x): return sigmoid(x) * (1 - sigmoid(x))
 
-sample_size = 10000
+sample_size = 1000
 sigmas = np.linspace(0, 1, 1000)
 x = np.random.randn(sample_size, len(sigmas)) * sigmas
 
