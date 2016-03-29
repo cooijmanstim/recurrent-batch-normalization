@@ -55,8 +55,14 @@ MILA - Universit\'e de Montr\'eal\\
 \maketitle
 
 \begin{abstract}
-We propose a reparameterization of LSTM that brings the benefits of batch normalization to recurrent neural networks.
-Empirical results show faster convergence and improved generalization on classification, language modeling and question answering tasks.
+
+We propose batch-normalize LSTM, a re-parameterization of LSTM that brings the benefits of batch normalization to recurrent neural networks.
+While previous works have only succeeded in applying bach-normalization on the hidden-to-input transformation of a RNN,
+we demonstrate that it is possible and beneficial to apply batch normalization in the hidden-to-hidden transition, easing the internal covariate shift
+that occurs throught the different time-steps of a RNN.
+
+We evaluate our proposal on various sequential problems such as sequence classification, language modeling and question answering.
+Empirical results show that our batch-normalize LSTM consistently leads to faster convergence and improved generalization.
 \end{abstract}
 
 \section{Introduction}
