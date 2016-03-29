@@ -492,7 +492,14 @@ We train on nonoverlapping sequences of length 180.
 %% \label{tab:text8_test}
 %% \end{table}
 
-Table~\ref{tab:text8_test} reports our performance in bits-per-character on the text8 test string.
+Our model is a BN-LSTM with 2000 units, trained to predict the next character using a softmax classifier on the hidden state $h_t$.
+We use stochastic gradient descent on minibatches of size 64,
+with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
+with learning rate 0.01.
+All weight matrices were initialized to be orthogonal.
+
+We early-stop on validation performance and report the test performance of the resulting model in table~\ref{tab:text8_test}.
+Our model achieves state of the art.
 
 \subsection{Teaching Machines to Read and Comprehend}
 
