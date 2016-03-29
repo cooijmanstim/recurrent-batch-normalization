@@ -490,7 +490,7 @@ Our model achieves state of the art.
 \center
 \includegraphics[width=0.8\textwidth]{figures/attr_valid.pdf}
 \caption{
-Accuracy on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
+Error rate on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
 BN-LSTM converges much faster than the baseline LSTM.
 Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
 }
@@ -513,6 +513,7 @@ with learning rate $8 \times 10^{-5}$.
 We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task
 using a subset of the CNN dataset.
 [Caglar will write a blurb on how the subset of data is selected]
+[when we get that, put the error lower bound in the figure caption]
 
 Figure~\ref{fig:attr_valid} shows the learning curves for the different variants of the attentive reader.
 BN-LSTM trains dramatically faster than the LSTM baseline.
