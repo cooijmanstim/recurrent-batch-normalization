@@ -81,6 +81,7 @@ This effectively decouples each layer's parameters from those of other layers, l
 Indeed, deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
 Although batch normalization has demonstrated significant training speed-ups and generalization benefits in feedforward networks,
+
 it has proven difficult to apply in recurrent architectures~\cite{cesar,baidu}.
 It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN, but not ``horizontally'' between timesteps.
 RNNs are deepest in the time direction, and as such batch normalization would be most beneficial when applied horizontally.
@@ -89,19 +90,21 @@ because of exploding gradients due to repeated rescaling.
 
 Our findings run counter to this hypothesis.
 We show that it is possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
-In particular, we describe a reparameterization of LSTM that involves batch normalization
+In particular, we describe a re-parameterization of LSTM that involves batch normalization
 and demonstrate that doing so speeds up optimization and improves generalization.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
 of the batch normalization parameters is crucial to avoiding gradient vanishing.
 
 We evaluate our proposal on several sequential problems and show that our
-LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
+LSTM re-parameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
 In particular, we achieve state-of-the-art performance on Sequential MNIST~\cite{le2015simple}.
 
 %% FIXME add section 4
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
 In Section~\ref{sec:recurrent-batch-normalization} we discuss batch normalization in the recurrent setting.
+Section~\ref{sec:activation-variance} investigates the impact of the batch normalization scale parameter on the gradient back-propagation for
+recurrent models .
 We show in Section~\ref{sec:experiments} our evaluations of the proposed re-parameterization on a variety of tasks.
 
 \section{Prerequisites}
@@ -172,7 +175,7 @@ but also to adapt to the changing distribution of the inputs.
 In deep neural networks, this problem manifests as \emph{internal covariance shift}~\cite{batchnorm},
 where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 
-Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
+Batch Normalization~\cite{batchnorm} is a recently proposed network re-parameterization that aims to reduce internal covariate shift.
 It does so by standardizing the activations using statistical estimates of their means and standard deviations.
 However, it does not decorrelate the activations as the matrix inversion involved would be too expensive.
 
@@ -204,7 +207,7 @@ During inference, the statistics are typically estimated based on the entire tra
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
-This section introduces a reparameterization of LSTM that takes advantage of batch normalization.
+This section introduces a re-parameterization of LSTM that takes advantage of batch normalization.
 Contrary to previous work~\cite{cesar, baidu}, we leverage batch normalization in both the input-to-hidden \emph{and} the hidden-to-hidden transformations.
 We introduce the batch-normalizing transform $\mathrm{BN}(\cdot; \gamma, \beta)$ into the LSTM as follows:
 
@@ -258,6 +261,7 @@ At test time we use estimates obtained by averaging the minibatch estimates over
 
 
 \section{On the Importance of Pre-Activation Variances}
+\label{sec:activation-variance}
 
 \begin{figure}[!ht]
   \center%
@@ -479,10 +483,10 @@ Applying batch normalization in the attention computations as well (``BN-everywh
 \label{fig:attr_valid}
 \end{figure}
 
-To demonstrate the generality and practical applicability of our reparameterization,
+To demonstrate the generality and practical applicability of our re-parameterization,
 we explore the use of batch-normalized LSTM in the Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
 We evaluate two variants.
-The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
+The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM re-parameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
 
 All three variants are trained using the exact same hyperparameters.
