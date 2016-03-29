@@ -81,7 +81,6 @@ This effectively decouples each layer's parameters from those of other layers, l
 Indeed, deep neural networks trained with batch normalization converge significantly faster and generalize better.
 
 Although batch normalization has demonstrated significant training speed-ups and generalization benefits in feedforward networks,
-
 it has proven difficult to apply in recurrent architectures~\cite{cesar,baidu}.
 It has found limited use in stacked RNNs, where the normalization is applied ``vertically'', i.e. to the input of each RNN, but not ``horizontally'' between timesteps.
 RNNs are deepest in the time direction, and as such batch normalization would be most beneficial when applied horizontally.
