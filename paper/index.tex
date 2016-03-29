@@ -405,13 +405,13 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \end{figure}
 \begin{table}
   \center
-\begin{minipage}[t]{7.5cm}
+\begin{minipage}[t]{6.5cm}
 \begin{tabular}{@{}lc@{}}
   \toprule
   \bf Model & \bf Penn Treebank \\
   \midrule
   HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
-  LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
+  Norm-stabilized LSTM~\cite{krueger} & 1.39 \\
   ME n-gram~\cite{mikolov2012subword} & 1.37 \\
   \midrule
   LSTM (ours) & 1.38 \\
@@ -422,7 +422,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \label{tab:ptb_test}
 \end{minipage}
 \hspace{1cm}
-\begin{minipage}[t]{3.5cm}
+\begin{minipage}[t]{4.5cm}
   \begin{tabular}{@{}lc@{}}
   \toprule
   \bf Model & \bf text8 \\
