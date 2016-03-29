@@ -1,4 +1,5 @@
-import sys, os, util
+import util
+import sys, os, util, itertools, copy, re, pprint
 import logging
 from collections import OrderedDict
 import numpy as np
@@ -20,6 +21,7 @@ from extensions import DumpLog, DumpBest, PrintingTo, DumpVariables
 from blocks.main_loop import MainLoop
 from blocks.utils import shared_floatx_zeros
 from blocks.roles import add_role, PARAMETER
+from blocks.serialization import load
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -59,30 +61,28 @@ class Text8(fuel.datasets.Dataset):
     provides_sources = ('features',)
     example_iteration_scheme = None
 
-    def __init__(self, which_set, length, overlapping=False):
-        assert not overlapping
+    def __init__(self, which_set, length, augment=False):
         self.which_set = which_set
         self.length = length
-        self.overlapping = overlapping
+        self.augment = augment
         data = np.load(os.environ["CHAR_LEVEL_TEXT8_NPZ"])
         self.data = data[which_set]
         self.vocab = data["vocab"]
         self.num_examples = int(len(self.data) / self.length)
-        if self.which_set == "train":
+        if self.augment:
             # -1 so we have one self.length worth of room for augmentation
             self.num_examples -= 1
         super(Text8, self).__init__()
 
     def open(self):
         data = self.data
-        if self.which_set == "train":
+        if self.augment:
             # choose an offset to get some data augmentation by not always chopping
             # the examples at the same point.
-            # +1 to be consistent with self.num_examples.
-            offset = 1 + np.random.randint(self.length)
+            offset = np.random.randint(self.length)
             data = data[offset:]
         # reshape to nonoverlapping examples
-        data = (self.data[:self.num_examples * self.length]
+        data = (data[:self.num_examples * self.length]
                 .reshape((self.num_examples, self.length)))
         # return the data so we will get it as the "state" argument to get_data
         return data
@@ -91,8 +91,8 @@ class Text8(fuel.datasets.Dataset):
         one_hot_batch = np.eye(len(self.vocab), dtype=theano.config.floatX)[state[request]]
         return (one_hot_batch,)
 
-def get_stream(which_set, batch_size, length, num_examples=None, overlapping=False):
-    dataset = Text8(which_set, length=length, overlapping=overlapping)
+def get_stream(which_set, batch_size, length, num_examples=None, augment=False):
+    dataset = Text8(which_set, length=length, augment=augment)
     if num_examples is None or num_examples > dataset.num_examples:
         num_examples = dataset.num_examples
     stream = fuel.streams.DataStream.default_stream(
@@ -109,12 +109,13 @@ class Parameters(object):
     pass
 
 class BatchNormalization(object):
-    def __init__(self, shape, initial_gamma=1, initial_beta=0, name=None, use_bias=True):
+    def __init__(self, shape, initial_gamma=1, initial_beta=0, name=None, use_bias=True, epsilon=1e-5):
         self.shape = shape
         self.initial_gamma = initial_gamma
         self.initial_beta = initial_beta
         self.name = name
         self.use_bias = use_bias
+        self.epsilon = epsilon
 
     @property
     def parameters(self):
@@ -148,7 +149,7 @@ class BatchNormalization(object):
                 inputs=x,
                 gamma=p.gammas, beta=betas,
                 mean=T.shape_padleft(mean),
-                std=T.shape_padleft(T.sqrt(var + args.epsilon)))
+                std=T.shape_padleft(T.sqrt(var + self.epsilon)))
         return y, mean, var
 
 class LSTM(object):
@@ -159,9 +160,9 @@ class LSTM(object):
         self.nclasses = nclasses
         self.activation = activations[args.activation]
 
-        self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a")
-        self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", use_bias=False)
-        self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c")
+        self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a", epsilon=args.epsilon)
+        self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", epsilon=args.epsilon, use_bias=False)
+        self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c", epsilon=args.epsilon)
 
     @property
     def parameters(self):
@@ -357,7 +358,7 @@ def construct_graphs(args, nclasses):
             dict(training=training_extensions, inference=inference_extensions),
             dict(training=training_updates,    inference=inference_updates))
 
-if __name__ == "__main__":
+def main():
     nclasses = 27
 
     import argparse
@@ -379,6 +380,7 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer", choices="sgdmomentum adam rmsprop", default="rmsprop")
     parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
+    parser.add_argument("--evaluate")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -430,7 +432,7 @@ if __name__ == "__main__":
 
     validation_interval = 500
     # performance monitor
-    for situation in "training".split(): #"training inference".split():
+    for situation in "training inference".split():
         for which_set in "train valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)
@@ -457,6 +459,112 @@ if __name__ == "__main__":
         PrintingTo("log"),
     ])
     main_loop = MainLoop(
-        data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=args.length),
+        data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=args.length, augment=True),
         algorithm=algorithm, extensions=extensions, model=model)
+
+    if args.evaluate:
+        evaluate(args, main_loop)
+        return
+
     main_loop.run()
+
+def transfer_parameters(src_main_loop, dest_main_loop):
+    src_parameters  = dict((parameter.name, parameter) for parameter in src_main_loop.algorithm.parameters)
+    dest_parameters = dict((parameter.name, parameter) for parameter in dest_main_loop.algorithm.parameters)
+
+    # assert sets of parameters equal
+    assert not (set(src_parameters) - set(dest_parameters))
+    assert not (set(dest_parameters) - set(src_parameters))
+
+    for name, src_parameter in src_parameters.items():
+        dest_parameter = dest_parameters[name]
+        assert dest_parameter.get_value().shape == src_parameter.get_value().shape
+        dest_parameter.set_value(src_parameter.get_value())
+
+def evaluate(args, main_loop):
+    # load parameters of trained model
+    trained_main_loop = load(args.evaluate)
+    transfer_parameters(trained_main_loop, main_loop)
+    del trained_main_loop
+
+    # extract population statistic updates
+    updates = [update for update in main_loop.algorithm.updates
+               # FRAGILE
+               if re.search("_(mean|var)$", update[0].name)]
+    print updates
+
+    old_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
+
+    # baseline doesn't need all this
+    if updates:
+        train_stream = get_stream(which_set="train",
+                                  batch_size=1000,
+                                  length=args.length)
+        nbatches = len(list(train_stream.get_epoch_iterator()))
+
+        # destructure moving average expression to construct a new expression
+        new_updates = []
+        for popstat, value in updates:
+            # FRAGILE
+            assert value.owner.op.scalar_op == theano.scalar.add
+            terms = value.owner.inputs
+            # right multiplicand of second term is popstat
+            assert popstat in theano.gof.graph.ancestors([terms[1].owner.inputs[1]])
+            # right multiplicand of first term is batchstat
+            batchstat = terms[0].owner.inputs[1]
+
+            old_popstats[popstat] = popstat.get_value()
+
+            # FRAGILE: assume population statistics not used in computation of batch statistics
+            # otherwise popstat should always have a reasonable value
+            popstat.set_value(0 * popstat.get_value(borrow=True))
+            new_updates.append((popstat, popstat + batchstat / float(nbatches)))
+
+        # FRAGILE: assume all the other algorithm updates are unneeded for computation of batch statistics
+        estimate_fn = theano.function(main_loop.algorithm.inputs, [],
+                                      updates=new_updates, on_unused_input="warn")
+        print("averaging batch statistics over", nbatches, "batches")
+        for batch in train_stream.get_epoch_iterator(as_dict=True):
+            estimate_fn(**batch)
+            sys.stdout.write(".")
+            sys.stdout.flush()
+        print
+
+    new_popstats = dict((popstat, popstat.get_value()) for popstat, _ in updates)
+
+    from blocks.monitoring.evaluators import DatasetEvaluator
+    results = dict()
+    for situation in "training inference".split():
+        results[situation] = dict()
+        outputs, = [
+            extension._evaluator.theano_variables
+            for extension in main_loop.extensions
+            if getattr(extension, "prefix", None) == "valid_%s" % situation]
+        evaluator = DatasetEvaluator(outputs)
+        for which_set in "valid test".split():
+            print(situation, which_set)
+            results[situation][which_set] = OrderedDict(
+                (length, evaluator.evaluate(get_stream(
+                    which_set=which_set,
+                    batch_size=100,
+                    length=length)))
+                for length in [1000])
+
+    try:
+        results["proper_test"] = evaluator.evaluate(
+            get_stream(
+                which_set="test",
+                batch_size=1,
+                length=5*10**6))
+    except:
+        # that will probably run out of memory
+        pass
+
+    import cPickle
+    cPickle.dump(dict(results=results,
+                      old_popstats=old_popstats,
+                      new_popstats=new_popstats),
+                 open(sys.argv[1] + "_popstat_results.pkl", "w"))
+
+if __name__ == "__main__":
+    main()
