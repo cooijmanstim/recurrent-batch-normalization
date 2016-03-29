@@ -410,8 +410,6 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \toprule
   \bf Model & \bf Penn Treebank \\
   \midrule
-  LSTM~\cite{graves2013generating} &  1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}\\
-  \midrule
   HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
   LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
   ME n-gram~\cite{mikolov2012subword} & 1.37 \\
@@ -437,7 +435,9 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   BN-LSTM (ours) & \textbf{NaN} \\
   \bottomrule
 \end{tabular}
-\caption{Bits-per-character on the text8 test string.}
+\caption{
+Bits-per-character on the text8 test string.\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
+}
 \label{tab:text8_test}
 \end{minipage}
 \end{table}
