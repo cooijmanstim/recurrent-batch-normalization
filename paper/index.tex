@@ -94,7 +94,7 @@ We show that it is both possible and highly beneficial to apply batch normalizat
 In particular, we describe a re-parameterization of LSTM that involves batch normalization
 and demonstrate that doing so speeds up optimization and improves generalization.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
-of the batch normalization parameters is crucial to avoiding gradient vanishing.
+of the batch normalization parameters is crucial to avoiding vanishing gradient.
 
 We evaluate our proposal on several sequential problems and show that our
 LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
@@ -270,7 +270,7 @@ At test time we use estimates obtained by averaging the minibatch estimates over
   \center%
   \subfigure[
 Gradient flow through a batch-normalized $\tanh$ RNN as a function of $\gamma$.
-High variance causes gradient vanishing.
+High variance causes vanishing gradient.
 ]{%
     \label{fig:rnn_grad_prop}
     \includegraphics[width=.45\textwidth]{figures/rnn_grad_prop.pdf}
