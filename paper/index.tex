@@ -12,7 +12,8 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{multirow}
-\usepackage{caption} 
+\usepackage{caption}
+\usepackage{minipage} 
 \usepackage{url}
 \usepackage{booktabs}
 \renewcommand{\arraystretch}{1.2}
@@ -384,6 +385,63 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 
 \subsection{Character-level Penn Treebank}
 
+\begin{figure}
+  \center%
+  \subfigure[
+    Performance in bits-per-character on length-100 subsequences of the Penn Treebank
+    validation sequence during training.
+]{%
+    \label{fig:ptb_valid}
+    \includegraphics[width=.45\textwidth]{figures/ptb_valid.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+    Generalization to longer subsequences (of the Penn Treebank test sequence) using population statistics.
+]{%
+    \label{fig:ptb_lengths}
+    \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
+  }
+\end{figure}
+\begin{table}
+  \center
+\begin{minipage}[t]{7.5cm}
+\begin{tabular}{@{}lc@{}}
+  \toprule
+  \bf Model & \bf Penn Treebank \\
+  \midrule
+  LSTM~\cite{graves2013generating} & \bf 1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
+\\
+  HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
+  LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
+  ME n-gram~\cite{mikolov2012subword} & 1.37 \\
+  \midrule
+  LSTM (ours) & 1.38 \\
+  BN-LSTM (ours) & 1.32 \\
+  \bottomrule
+\end{tabular}
+\caption{Bits-per-character on the Penn Treebank test string.}
+\label{tab:ptb_test}
+\end{minipage}
+\hspace{1cm}
+\begin{minipage}[t]{3.5cm}
+    \begin{tabular}{@{}lc@{}}
+  \toprule
+  \bf Model & \bf text8 \\
+  \midrule
+  $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
+  HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
+  skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
+  \midrule
+  LSTM (ours) & NaN \\
+  BN-LSTM (ours) & \textbf{NaN} \\
+  \bottomrule
+\end{tabular}
+\caption{Bits-per-character on the text8 test string.}
+\label{tab:text8_test}
+\end{minipage}
+\end{table}
+
+
 We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\cite{penntreebank}
 according to the train/valid/test partition of~\cite{mikolov2012subword}.
 For training we segment the training sequence into examples of length 100.
@@ -407,43 +465,6 @@ In table~\ref{tab:ptb_test} we report the performance of the best models
 on the Penn Treebank test string.
 
 
-\begin{figure}
-  \center%
-  \subfigure[
-    Performance in bits-per-character on length-100 subsequences of the Penn Treebank
-    validation sequence during training.
-]{%
-    \label{fig:ptb_valid}
-    \includegraphics[width=.45\textwidth]{figures/ptb_valid.pdf}
-  }%
-  \hspace{2mm}%
-  \subfigure[
-    Generalization to longer subsequences (of the Penn Treebank test sequence) using population statistics.
-]{%
-    \label{fig:ptb_lengths}
-    \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
-  }
-\end{figure}
-
-\begin{table}
-\center
-\begin{tabular}{@{}lc@{}}
-  \toprule
-  \bf Model & \bf Penn Treebank \\
-  \midrule
-  LSTM~\cite{graves2013generating} & \bf 1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
-\\
-  HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
-  LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
-  ME n-gram~\cite{mikolov2012subword} & 1.37 \\
-  \midrule
-  LSTM (ours) & 1.38 \\
-  BN-LSTM (ours) & 1.32 \\
-  \bottomrule
-\end{tabular}
-\caption{Bits-per-character on the Penn Treebank test string.}
-\label{tab:ptb_test}
-\end{table}
 
 \subsection{Text8}
 
@@ -452,23 +473,23 @@ This dataset is derived from Wikipedia and consists of a string of 100M characte
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
 
-\begin{table}
-\center
-\begin{tabular}{@{}lc@{}}
-  \toprule
-  \bf Model & \bf text8 \\
-  \midrule
-  $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
-  HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
-  skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
-  \midrule
-  LSTM (ours) & NaN \\
-  BN-LSTM (ours) & \textbf{NaN} \\
-  \bottomrule
-\end{tabular}
-\caption{Bits-per-character on the text8 test string.}
-\label{tab:text8_test}
-\end{table}
+%% \begin{table}
+%% \center
+%% \begin{tabular}{@{}lc@{}}
+%%   \toprule
+%%   \bf Model & \bf text8 \\
+%%   \midrule
+%%   $td$-LSTM~\cite{zhang2016architectural} & 1.63 \\
+%%   HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
+%%   skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
+%%   \midrule
+%%   LSTM (ours) & NaN \\
+%%   BN-LSTM (ours) & \textbf{NaN} \\
+%%   \bottomrule
+%% \end{tabular}
+%% \caption{Bits-per-character on the text8 test string.}
+%% \label{tab:text8_test}
+%% \end{table}
 
 Table~\ref{tab:text8_test} reports our performance in bits-per-character on the text8 test string.
 
