@@ -505,6 +505,13 @@ In addition, both BN-LSTM and BN-everywhere show a generalization benefit over t
 
 \section{Conclusion}
 
+Contrary to previous findings~\cite{cesar,baidu},
+we demonstrated that batch-normalizing the hidden states of recurrent neural networks greatly improves optimization.
+Indeed, doing so yields benefits similar to those of batch normalization in feed-forward neural networks:
+our proposed BN-LSTM trains faster and generalizes better on a variety of tasks including language modeling and question-answering.
+We argued that proper initialization of the batch normalization parameters is crucial,
+and suggest that improper initialization was the cause of the previous difficulties~\cite{cesar, baidu}.
+
 \section*{Acknowledgements}
 
 The authors would like to acknowledge the support of the following agencies for
