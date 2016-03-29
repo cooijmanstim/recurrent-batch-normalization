@@ -418,10 +418,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   BN-LSTM (ours) & \textbf{1.32} \\
   \bottomrule
 \end{tabular}
-\caption{
-Bits-per-character on the Penn Treebank test string.
-\protect\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
-}
+\caption{Bits-per-character on the Penn Treebank test string.}
 \label{tab:ptb_test}
 \end{minipage}
 \hspace{1cm}
@@ -463,7 +460,9 @@ We observe that using the population statistics improves generalization performa
 which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
 is a viable strategy.
 In table~\ref{tab:ptb_test} we report the performance on the Penn Treebank test string of our best models
-(early stopped on validation performance) and compare them to previous works. It shows that our BN-LSTM model compares favorably to state-of-art models.
+(early stopped on validation performance) and compare them to previous works.
+\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
+It shows that our BN-LSTM model compares favorably to state-of-art models.
 
 
 
