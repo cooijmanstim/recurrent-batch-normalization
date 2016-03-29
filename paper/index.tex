@@ -269,7 +269,7 @@ At test time we use estimates obtained by averaging the minibatch estimates over
 %% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
 
 
-\section{On the Importance of Pre-Activation Variances}
+\section{Initializing $\gamma$ for Gradient Flow}
 \label{sec:activation-variance}
 
 \begin{figure}[!ht]
@@ -303,7 +303,7 @@ In this section we demonstrate the impact of $\gamma$ on gradient flow.
 
 In Figure~\ref{fig:rnn_grad_prop} we show how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
 Since backpropagation operates in reverse, the plot is best read from right to left.
-The quantity plotted is the norm of the gradient of the loss with respect to the hidden states.
+The quantity plotted is the norm of the gradient of the loss with respect to the hidden state at different time steps.
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
@@ -311,16 +311,17 @@ Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the 
 When the input variance is low, the input tends to be close to the origin where the derivative is close to 1.
 As the variance increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
 At unit variance, the expected derivative is much smaller than 1.
-We conjecture that this is what causes the gradient to vanish.
 
-% include lstm grad plot and speculate...?
+We conjecture that this is what causes the gradient to vanish, and recommend initializing $\gamma$ to a small value.
+In our trials we found that values of 0.01 or lower caused instabilities during training.
+Our choice of 0.1 seems to work well across tasks.
 
 \section{Experiments}
 \label{sec:experiments}
 
 This section presents an empirical evaluation of the proposed batch-normalized LSTM on four different tasks. Results show that batch-normalized LSTM achieves convergence faster than a baseline LSTM on all the tasks, and, can also lead to better generalization.
 
-Note that for all the experiments, we initialize the batch normalization scale parameters to $0.1$ and the shift parameters to $0$.
+Note that for all the experiments, we initialize the batch normalization scale and shift parameters $\gamma$ and $\beta$ to $0.1$ and $0$ respectively.
 
 
 
@@ -523,8 +524,8 @@ Figure~\ref{fig:attr_valid} shows the learning curves for the different variants
 BN-LSTM trains dramatically faster than the LSTM baseline.
 BN-everywhere, applying batch normalization in the attention computations as well, in turn shows a significant
 improvement over BN-LSTM.
-In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline (on the validation set).
-%% FIXME should we add a table for that
+In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
+We emphasize that these are preliminary results on the validation set; full results are forthcoming.
 
 \section{Conclusion}
 
