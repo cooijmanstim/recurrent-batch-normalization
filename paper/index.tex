@@ -409,14 +409,14 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \toprule
   \bf Model & \bf Penn Treebank \\
   \midrule
-  LSTM~\cite{graves2013generating} & \bf 1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}
-\\
+  LSTM~\cite{graves2013generating} &  1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they used a different dataset split.}\\
+  \midrule
   HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
   LSTM with norm stabilizer~\cite{krueger} & 1.39 \\
   ME n-gram~\cite{mikolov2012subword} & 1.37 \\
   \midrule
   LSTM (ours) & 1.38 \\
-  BN-LSTM (ours) & 1.32 \\
+  BN-LSTM (ours) & \textbf{1.32} \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test string.}
