@@ -447,12 +447,12 @@ according to the train/valid/test partition of~\cite{mikolov2012subword}.
 For training we segment the training sequence into examples of length 100.
 The training sequence does not cleanly divide by 100, so for each epoch we randomly crop a subsequence that does and segment that instead.
 
-Our baseline is an LSTM with 1000 units.
+Our baseline is an LSTM with 1000 units, trained to predict the next character using a softmax classifier on the hidden state $h_t$.
 We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate 0.002.
 We use orthogonal initialization for all weight matrices.
-The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization.
+The setup for the batch-normalized LSTM is the same in all respects except for the introduction of batch normalization as detailed in~\ref{sec:recurrent-batch-normalization}.
 
 We show the learning curves in figure~\ref{fig:ptb_valid}.
 BN-LSTM converges faster and generalizes better than the LSTM baseline.
@@ -507,7 +507,7 @@ Applying batch normalization in the attention computations as well (``BN-everywh
 \end{figure}
 
 To demonstrate the generality and practical applicability of our re-parameterization,
-we explore the use of batch-normalized LSTM in the Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
+we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
 We evaluate two variants.
 The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM re-parameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
