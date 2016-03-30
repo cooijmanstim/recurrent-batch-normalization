@@ -174,13 +174,11 @@ class LSTM(object):
         self.num_hidden = args.num_hidden
         self.initializer = args.initializer
         self.identity_hh = args.initialization == "identity"
-        self.peepholes = args.peepholes
         self.nclasses = nclasses
         self.activation = activations[args.activation]
 
         self.bn_a = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_a", epsilon=args.epsilon)
         self.bn_b = BatchNormalization((4 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_b", epsilon=args.epsilon, use_bias=False)
-        self.bn_p = BatchNormalization((3 * args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_p", epsilon=args.epsilon, use_bias=False)
         self.bn_c = BatchNormalization((    args.num_hidden,), initial_gamma=args.initial_gamma, name="bn_c", epsilon=args.epsilon)
 
     @property
@@ -200,8 +198,7 @@ class LSTM(object):
                 theano.shared(zeros((self.num_hidden,)), name="h0"),
                 theano.shared(zeros((self.num_hidden,)), name="c0"),
                 theano.shared(Wa, name="Wa"),
-                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx"),
-                theano.shared(self.initializer((self.num_hidden, 3 * self.num_hidden)), name="Wp")]:
+                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx")]:
             add_role(parameter, PARAMETER)
             setattr(parameters, parameter.name, parameter)
 
@@ -226,7 +223,7 @@ class LSTM(object):
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
 
         output_names = "h c atilde btilde".split()
-        for key in "abcp":
+        for key in "abc":
             for stat in "mean var".split():
                 output_names.append("%s_%s" % (key, stat))
 
@@ -236,7 +233,7 @@ class LSTM(object):
             # us to generalize to longer sequences, in which case we
             # repeat the last element.
             popstats_by_key = dict()
-            for key in "abcp":
+            for key in "abc":
                 popstats_by_key[key] = dict()
                 for stat in "mean var".split():
                     if not args.baseline and args.use_population_statistics:
@@ -252,29 +249,14 @@ class LSTM(object):
                         popstat = None
                     popstats_by_key[key][stat] = popstat
 
-            atilde, btilde, ptilde = T.dot(h, p.Wa), T.dot(x, p.Wx), T.dot(c, p.Wp)
+            atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
             a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
             b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
-            p_normal, p_mean, p_var = self.bn_p.construct_graph(ptilde, baseline=args.baseline, **popstats_by_key["p"])
-
-            # peepholes go only to gates, not to g
-            p_normal = T.concatenate([T.zeros((p_normal.shape[0], self.num_hidden)), p_normal], axis=1)
-            if not self.peepholes:
-                # if we leave p_normal out of the graph, blocks will
-                # still consider p.Wp a parameter as it is used in
-                # scan outputs, but since it's not part of the graph
-                # computing the cost T.grad will complain
-                p_normal *= 0
-
-            ab = a_normal + b_normal + p_normal
-
+            ab = a_normal + b_normal
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
-
             c = dummy_c + f * c + i * g
-
             c_normal, c_mean, c_var = self.bn_c.construct_graph(c, baseline=args.baseline, **popstats_by_key["c"])
-
             h = dummy_h + o * self.activation(c_normal)
 
             return [locals()[name] for name in output_names]
@@ -296,7 +278,7 @@ class LSTM(object):
             # prepare population statistic estimation
             popstats = dict()
             alpha = 0.05
-            for key, size in zip("abcp", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden, 3*args.num_hidden]):
+            for key, size in zip("abc", [4*args.num_hidden, 4*args.num_hidden, args.num_hidden]):
                 for stat, init in zip("mean var".split(), [0, 1]):
                     name = "%s_%s" % (key, stat)
                     popstats[name] = theano.shared(
@@ -402,7 +384,6 @@ if __name__ == "__main__":
     parser.add_argument("--initial-beta", type=float, default=0)
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
-    parser.add_argument("--peepholes", action="store_true")
     parser.add_argument("--optimizer", choices="sgdmomentum rmsprop adam".split(), default="rmsprop")
     parser.add_argument("--learning-rate-decay", type=float, default=0.0)
     parser.add_argument("--continue-from")
