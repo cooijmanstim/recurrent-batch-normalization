@@ -521,7 +521,7 @@ with learning rate $8 \times 10^{-5}$.
 We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task using the CNN corpus, with placeholders to replace the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
 However contrary to~\cite{attentivereader}, we limit the number of sentences in each passage to 4 in order to save computation.
 We choose which sentences to keep by performing a string matching between the question and the passage.
-We rank the sentences in the text according to the normalized score obtained with the match and use only the top 4 sentences for each passage in the dataset.
+We rank the sentences in the text according to the string matching score and use only the top 4 sentences for each passage in the dataset.
 The training, validation and test sets are all preprocessed using this same procedure.
 After this procedure, the validation set has a recall of $57\%$ -- the passage contains the answer in only $57\%$ of the passage/question pairs.
 This puts an upper bound on the accuracy that can be achieved.
