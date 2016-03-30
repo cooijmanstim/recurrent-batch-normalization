@@ -7,7 +7,6 @@ from theano.sandbox.rng_mrg import MRG_RandomStreams
 import blocks.config
 import fuel.datasets, fuel.streams, fuel.transformers, fuel.schemes
 
-# i shake my head
 from blocks.graph import ComputationGraph
 from blocks.algorithms import GradientDescent, RMSProp, StepClipping, CompositeRule, Momentum, Adam
 from blocks.model import Model
@@ -347,8 +346,6 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
     return graph, extensions
 
 def construct_graphs(args, nclasses):
-    constructor = LSTM if args.lstm else RNN
-
     if args.initialization in "identity orthogonal".split():
         args.initializer = orthogonal
     elif args.initialization == "uniform":
@@ -373,12 +370,12 @@ def construct_graphs(args, nclasses):
     length = args.length - 1
 
     args.use_population_statistics = False
-    turd = constructor(args, nclasses)
-    (outputs, training_updates, dummy_states, popstats) = turd.construct_graph(
+    lstm = LSTM(args, nclasses)
+    (outputs, training_updates, dummy_states, popstats) = lstm.construct_graph(
         args, x, length)
     training_graph, training_extensions = construct_common_graph("training", args, outputs, dummy_states, Wy, by, y)
     args.use_population_statistics = True
-    (outputs, inference_updates, dummy_states, _) = turd.construct_graph(
+    (outputs, inference_updates, dummy_states, _) = lstm.construct_graph(
         args, x, length,
         # use popstats from previous invocation
         popstats=popstats)
@@ -403,7 +400,6 @@ if __name__ == "__main__":
     parser.add_argument("--epsilon", type=float, default=1e-5)
     parser.add_argument("--num-hidden", type=int, default=1000)
     parser.add_argument("--baseline", action="store_true")
-    parser.add_argument("--lstm", action="store_true")
     parser.add_argument("--initialization", choices="identity glorot orthogonal uniform".split(), default="identity")
     parser.add_argument("--initial-gamma", type=float, default=1e-1)
     parser.add_argument("--initial-beta", type=float, default=0)
