@@ -180,8 +180,7 @@ class LSTM(object):
                 theano.shared(zeros((self.num_hidden,)), name="h0"),
                 theano.shared(zeros((self.num_hidden,)), name="c0"),
                 theano.shared(Wa, name="Wa"),
-                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx"),
-                theano.shared(self.initializer((self.nclasses, self.num_hidden)), name="Wsummarize")]:
+                theano.shared(self.initializer((self.nclasses,   4 * self.num_hidden)), name="Wx")]:
             add_role(parameter, PARAMETER)
             setattr(parameters, parameter.name, parameter)
 
@@ -204,8 +203,6 @@ class LSTM(object):
         batch_size = x.shape[1]
         dummy_states = dict(h=T.zeros((symlength, batch_size, args.num_hidden)),
                             c=T.zeros((symlength, batch_size, args.num_hidden)))
-
-        summary = T.dot(x, p.Wsummarize).mean(axis=0) if args.summarize else 0
 
         output_names = "h c atilde btilde".split()
         for key in "abc":
@@ -252,7 +249,7 @@ class LSTM(object):
 
         sequences = [t, long_sequence_is_long, x, dummy_states["h"], dummy_states["c"]]
         outputs_info = [
-            T.repeat(p.h0[None, :], batch_size, axis=0) + summary,
+            T.repeat(p.h0[None, :], batch_size, axis=0),
             T.repeat(p.c0[None, :], batch_size, axis=0),
         ]
         outputs_info.extend([None] * (len(output_names) - len(outputs_info)))
@@ -374,7 +371,6 @@ def main():
     parser.add_argument("--cluster", action="store_true")
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--optimizer", choices="sgdmomentum adam rmsprop", default="rmsprop")
-    parser.add_argument("--summarize", action="store_true")
     parser.add_argument("--continue-from")
     parser.add_argument("--evaluate")
     args = parser.parse_args()
