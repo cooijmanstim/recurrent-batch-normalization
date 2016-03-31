@@ -23,15 +23,18 @@
 \title{Recurrent Batch Normalization}
 
 \author{
-Tim Cooijmans \\
+Tim Cooijmans$^\dagger$ \\
 \And
-Nicolas Ballas \\
+Nicolas Ballas$^\star$ \\
 \And
-C\'esar Laurent\\
+C\'esar Laurent$^\star$ \\
 \And
-Aaron Courville\\
+Çağlar Gülçehre$^\star$ \\
+\And
+Aaron Courville$^\star$\\
 MILA - Universit\'e de Montr\'eal\\
-\texttt{firstname.lastname@umontreal.ca} \\
+$^\dagger$ \texttt{lastname.firstname@gmail.com} \\
+$^\star$ \texttt{firstname.lastname@umontreal.ca} \\
 }
 
 \newcommand{\fix}{\marginpar{FIX}}
@@ -509,9 +512,7 @@ As detailed in the text, the theoretical lower bound on the error rate on this t
 \end{figure}
 
 To demonstrate the generality and practical applicability of our re-parameterization,
-we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.\footnote{
-  We thank Çağlar Gülçehre for sharing his implementation (the code is  available at \url{https://github.com/caglar/Attentive_reader})
-  and for providing the preprocessed CNN dataset.}
+we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.
 We evaluate two variants.
 The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM re-parameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
@@ -553,11 +554,10 @@ and suggest that previous difficulties~\cite{cesar, baidu} were due in large par
 The authors would like to acknowledge the support of the following agencies for
 research funding and computing support: NSERC, Calcul Qu\'{e}bec, Compute Canada,
 the Canada Research Chairs and CIFAR.
-We would also like to thank the developers of Theano~\cite{theano2} and the
+We thank the developers of Theano~\cite{theano2} and the
 Blocks and Fuel~\cite{blocks} libraries,
 for developing such powerful tools for scientific computing.
-We are grateful to Çağlar Gülçehre for sharing his implementation of Attentive Reader, providing the processed data to train it on and contributing a paragraph describing the preprocessing.
-We also thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
+We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
 \bibliographystyle{nips2015}
