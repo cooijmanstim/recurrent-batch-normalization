@@ -107,7 +107,7 @@ LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
 In particular, we achieve state-of-the-art performance on
 Sequential MNIST~\cite{le2015simple} and
-character-level language modeling~\cite{mikolov2012subword} on Penn Treebank~\cite{penntreebank} and text8~\cite{mahoney2009large}.
+character-level language modeling on the text8~\cite{mahoney2009large} corpus.
 
 %% FIXME add section 4
 Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
@@ -422,12 +422,14 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \toprule
   \bf Model & \bf Penn Treebank \\
   \midrule
+  LSTM~\cite{graves2013generating} &  1.26\footnote{Our performance does not directly compare against~\cite{graves2013generating} as they use a different dataset split.}\\
+  \midrule
   HF-MRNN~\cite{mikolov2012subword} & 1.41 \\
   Norm-stabilized LSTM~\cite{krueger} & 1.39 \\
   ME n-gram~\cite{mikolov2012subword} & 1.37 \\
   \midrule
   LSTM (ours) & 1.38 \\
-  BN-LSTM (ours) & \textbf{1.32} \\
+  BN-LSTM (ours) & 1.32 \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test sequence.}
@@ -470,9 +472,9 @@ Figure~\ref{fig:ptb_lengths} shows the generalization of our model to longer seq
 We observe that using the population statistics improves generalization performance,
 which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
 is a viable strategy.
-In table~\ref{tab:ptb_test} we report the performance of our best models (early stopped on validation performance)
-on the Penn Treebank test sequence and compare them to previous work.\footnote{We do not compare with~\cite{graves2013generating} as they evaluate in a different setting.}
-It shows that our BN-LSTM model compares favorably to state-of-art models.
+In table~\ref{tab:ptb_test} we report the performance of our best models (early-stopped on validation performance)
+on the Penn Treebank test sequence and compare them to previous work.
+It shows that our BN-LSTM model compares favorably to state-of-the-art models.
 
 
 
@@ -507,7 +509,9 @@ As detailed in the text, the theoretical lower bound on the error rate on this t
 \end{figure}
 
 To demonstrate the generality and practical applicability of our re-parameterization,
-we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.\footnote{We make use of the existing implementation available at \url{https://github.com/caglar/Attentive_reader}.}
+we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.\footnote{
+  We thank Çağlar Gülçehre for sharing his implementation (the code is  available at \url{https://github.com/caglar/Attentive_reader})
+  and for providing the preprocessed CNN dataset.}
 We evaluate two variants.
 The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM re-parameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
@@ -552,8 +556,8 @@ the Canada Research Chairs and CIFAR.
 We would also like to thank the developers of Theano~\cite{theano2} and the
 Blocks and Fuel~\cite{blocks} libraries,
 for developing such powerful tools for scientific computing.
-We thank Çağlar Gülçehre for sharing his implementation of Attentive Reader and for helping us with experiments,
-and David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
+We are grateful to Çağlar Gülçehre for sharing his implementation of Attentive Reader, providing the processed data to train it on and contributing a paragraph describing the preprocessing.
+We also thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
 \bibliographystyle{nips2015}
