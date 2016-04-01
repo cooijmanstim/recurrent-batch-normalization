@@ -425,6 +425,10 @@ def main():
     validation_interval = 500
     # performance monitor
     for situation in "training inference".split():
+        if situation == "inference" and not args.evaluate:
+            # save time when we don't need the inference graph
+            continue
+
         for which_set in "train valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
             channels = list(graphs[situation].outputs)
