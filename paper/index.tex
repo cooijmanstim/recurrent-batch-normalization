@@ -500,7 +500,7 @@ We train on nonoverlapping sequences of length 180.
 Both our baseline and batch-normalized models are LSTMs with 2000 units, trained to predict the next character using a softmax classifier
 on the hidden state $h_t$. We use stochastic gradient descent on minibatches of size 128,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
-with learning rate 0.01.
+with learning rate 0.001.
 All weight matrices were initialized to be orthogonal.
 
 We early-stop on validation performance and report the test performance of the resulting model in table~\ref{tab:text8_test}.
