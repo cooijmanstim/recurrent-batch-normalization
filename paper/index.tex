@@ -456,8 +456,8 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   HF-MRNN~\cite{mikolov2012subword} & 1.54 \\
   skipping RNN~\cite{pachitariu2013regularization} & 1.48 \\
   \midrule
-  LSTM (ours) &  1.41 \\
-  BN-LSTM (ours) & \textbf{1.39} \\
+  LSTM (ours) &  1.43 \\
+  BN-LSTM (ours) & \textbf{1.36} \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the text8 test sequence.}
@@ -497,14 +497,14 @@ This dataset is derived from Wikipedia and consists of a sequence of 100M charac
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
 
-Our model is a BN-LSTM with 2000 units, trained to predict the next character using a softmax classifier on the hidden state $h_t$.
-We use stochastic gradient descent on minibatches of size 64,
+Both our baseline and batch-normalized models are LSTMs with 2000 units, trained to predict the next character using a softmax classifier
+on the hidden state $h_t$. We use stochastic gradient descent on minibatches of size 128,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate 0.01.
 All weight matrices were initialized to be orthogonal.
 
 We early-stop on validation performance and report the test performance of the resulting model in table~\ref{tab:text8_test}.
-Our model achieves state of the art.
+We observe that BN-LSTM obtains a significant performance improvement over the LSTM baseline. In addition, our BN-LSTM  model achieves state of the art.
 
 \subsection{Teaching Machines to Read and Comprehend}
 
