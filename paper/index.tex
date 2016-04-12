@@ -317,10 +317,13 @@ The quantity plotted is the norm of the gradient of the loss with respect to the
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
-When the input variance is low, the input tends to be close to the origin where the derivative is close to 1.
-As the variance increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
-At unit variance, the expected derivative is much smaller than 1.
+Figure~\ref{fig:tanh_grad} empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
+We drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1,
+and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$.
+The distribution of this value (mean and interquartile range) as a function of the standard deviation of $x$ is shown in Figure~\ref{fig:tanh_grad}.
+When the input standard deviation is low, the input tends to be close to the origin where the derivative is close to 1.
+As the standard deviation increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
+At unit standard deviation, the expected derivative is much smaller than 1.
 
 We conjecture that this is what causes the gradient to vanish, and recommend initializing $\gamma$ to a small value.
 In our trials we found that values of 0.01 or lower caused instabilities during training.
