@@ -69,59 +69,6 @@ def get_stream(which_set, batch_size, num_examples=None):
     return stream
 
 
-# def construct_rnn(args, x, activation):
-#     parameters = []
-
-#     h0 = theano.shared(zeros((args.num_hidden,)), name="h0")
-#     Wh = theano.shared((0.99 if args.baseline else 1) * np.eye(args.num_hidden, dtype=theano.config.floatX), name="Wh")
-#     Wx = theano.shared(orthogonal((1, args.num_hidden)), name="Wx")
-
-#     parameters.extend([h0, Wh, Wx])
-
-#     gammas = theano.shared(args.inital_gamma * ones((args.num_hidden,)), name="gammas")
-#     betas  = theano.shared(args.initial_beta  * ones((args.num_hidden,)), name="betas")
-
-#     if args.baseline:
-#         parameters.extend([betas])
-#         def bn(x, gammas, betas):
-#             return x + betas
-#     else:
-#         parameters.extend([gammas, betas])
-#         def bn(x, gammas, betas):
-#             mean, var = x.mean(axis=0, keepdims=True), x.var(axis=0, keepdims=True)
-#             # if only
-#             mean.tag.batchstat, var.tag.batchstat = True, True
-#             #var = T.maximum(var, args.epsilon)
-#             var = var + args.epsilon
-#             return (x - mean) / T.sqrt(var) * gammas + betas
-
-#     xtilde = T.dot(x, Wx)
-
-#     if args.noise:
-#         # prime h with white noise
-#         Trng = MRG_RandomStreams()
-#         h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
-#     elif args.summarize:
-#         # prime h with mean of example
-#         h_prime = x.mean(axis=[0, 2])[:, None]
-#     else:
-#         h_prime = 0
-
-#     dummy_states = dict(h     =T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
-#                         htilde=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
-
-#     def stepfn(xtilde, dummy_h, dummy_htilde, h):
-#         htilde = dummy_htilde + T.dot(h, Wh) + xtilde
-#         h = dummy_h + activation(bn(htilde, gammas, betas))
-#         return h, htilde
-
-#     [h, htilde], _ = theano.scan(stepfn,
-#                                  sequences=[xtilde, dummy_states["h"], dummy_states["htilde"]],
-#                                  outputs_info=[T.repeat(h0[None, :], xtilde.shape[1], axis=0) + h_prime,
-#                                                None])
-
-#     return dict(h=h, htilde=htilde), dummy_states, parameters
-
 def bn(x, gammas, betas, mean, var, args):
     assert mean.ndim == 1
     assert var.ndim == 1
@@ -135,9 +82,11 @@ def bn(x, gammas, betas, mean, var, args):
     if args.baseline:
         y = x + betas
     else:
+        var_corrected = var + args.epsilon
+
         y = theano.tensor.nnet.bn.batch_normalization(
             inputs=x, gamma=gammas, beta=betas,
-            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var + args.epsilon)),
+            mean=T.shape_padleft(mean), std=T.shape_padleft(T.sqrt(var_corrected)),
             mode="high_mem")
     assert mean.ndim == 1
     assert var.ndim == 1
@@ -235,7 +184,17 @@ class LSTM(object):
 
 
         xtilde = T.dot(x, p.Wx)
-        h_prime = 0
+
+        if args.noise:
+            # prime h with white noise
+            Trng = MRG_RandomStreams()
+            h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
+        elif args.summarize:
+            # prime h with mean of example
+            h_prime = x.mean(axis=[0, 2])[:, None]
+        else:
+            h_prime = 0
+
         dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                             c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
 
@@ -275,12 +234,21 @@ class LSTM(object):
                 c_normal, c_mean, c_var = bn(c, p.c_gammas, p.c_betas, pop_means_c, pop_vars_c, args)
             h = dummy_h + o * self.activation(c_normal)
             return (h, c, atilde, btilde, c_normal,
-                    a_mean, b_mean, c_mean,
+                   a_mean, b_mean, c_mean,
                     a_var, b_var, c_var)
 
 
         xtilde = T.dot(x, p.Wx)
-        h_prime = 0
+        if args.noise:
+            # prime h with white noise
+            Trng = MRG_RandomStreams()
+            h_prime = Trng.normal((xtilde.shape[1], args.num_hidden), std=args.noise)
+        elif args.summarize:
+            # prime h with mean of example
+            h_prime = x.mean(axis=[0, 2])[:, None]
+        else:
+            h_prime = 0
+
         dummy_states = dict(h=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)),
                             c=T.zeros((xtilde.shape[0], xtilde.shape[1], args.num_hidden)))
 
@@ -368,13 +336,15 @@ def construct_graphs(args, nclasses, length):
     inputs = dict(features=T.tensor4("features"), targets=T.imatrix("targets"))
     x, y = inputs["features"], inputs["targets"]
 
-    #theano.config.compute_test_value = "warn"
-    #x.tag.test_value = np.random.random((args.batch_size, 28, 28, 1)).astype(theano.config.floatX)
-    #y.tag.test_value = np.ones((args.batch_size, 1)).astype(np.int32)
+    theano.config.compute_test_value = "warn"
+    batch = next(get_stream(which_set="train", batch_size=args.batch_size).get_epoch_iterator())
+    x.tag.test_value = batch[0]
+    y.tag.test_value = batch[1]
 
-    x = x.reshape((x.shape[0], length, 1))
+    x = x.reshape((x.shape[0], length + 0, 1))
     y = y.flatten(ndim=1)
     x = x.dimshuffle(1, 0, 2)
+    x = x[0:, :, :]
 
     if args.permuted:
         x = x[permutation]
@@ -437,7 +407,7 @@ if __name__ == "__main__":
     step_rule = CompositeRule([
         StepClipping(1.),
         #Momentum(learning_rate=args.learning_rate, momentum=0.9),
-        RMSProp(learning_rate=args.learning_rate, decay_rate=0.9),
+        RMSProp(learning_rate=args.learning_rate, decay_rate=0.5),
     ])
 
     algorithm = GradientDescent(cost=graphs["training"].outputs[0],
@@ -474,7 +444,7 @@ if __name__ == "__main__":
             extensions.append(DataStreamMonitoring(
                 channels,
                 prefix="%s_%s" % (which_set, situation), after_epoch=True,
-                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size))) #, num_examples=1000)))
+                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size)))#, num_examples=1000)))
     for situation in "inference".split(): # add inference
         for which_set in "valid test".split():
             logger.warning("constructing %s %s monitor" % (which_set, situation))
@@ -482,7 +452,7 @@ if __name__ == "__main__":
             extensions.append(DataStreamMonitoring(
                 channels,
                 prefix="%s_%s" % (which_set, situation), after_epoch=True,
-                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size))) #, num_examples=1000)))
+                data_stream=get_stream(which_set=which_set, batch_size=args.batch_size)))#, num_examples=1000)))
 
     extensions.extend([
         TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
