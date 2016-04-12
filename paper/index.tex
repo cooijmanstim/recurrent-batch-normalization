@@ -255,7 +255,7 @@ into the LSTM as follows:
 In our formulation, we normalize the recurrent term $\mat{W}_h \vect{h}_{t-1}$ and the input term $\mat{W}_x \vect{x}_t$ separately.
 Normalizing these terms individually gives the model better control over the relative contribution of the terms using the $\gamma_h$ and $\gamma_x$ parameters.
 We set $\beta_h = \beta_x = \vect{0}$ to avoid unnecessary redundancy, instead relying on the pre-existing parameter vector $\vect{b}$ to account for both biases.
-In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization in the recurrence of the cell state.
+In order to leave the LSTM dynamics intact and preserve the gradient flow through $\vect{c}_t$, we do not apply batch normalization in the cell update.
 
 The batch normalization transform relies on batch statistics to standardize the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
