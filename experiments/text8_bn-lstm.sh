@@ -3,5 +3,5 @@ nh=2000
 directory=text8-bn-lstm-nh$nh
 mkdir -p $directory
 cd $directory
-ipython --pdb $command --num-hidden $nh
+python $command --num-hidden $nh
 cd ..
