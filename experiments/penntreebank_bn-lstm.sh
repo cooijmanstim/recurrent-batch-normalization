@@ -4,5 +4,5 @@ nh=1000
 directory=bn-lstm-nh$nh-lr$lr
 mkdir -p $directory
 cd $directory
-ipython --pdb $command --num-hidden $nh --learning-rate $lr
+python $command --num-hidden $nh --learning-rate $lr
 cd ..

@@ -295,8 +295,7 @@ def construct_common_graph(situation, args, outputs, dummy_states, Wy, by, y):
     state_grads = dict((k, T.grad(cost, v))
                        for k, v in dummy_states.items())
     extensions = []
-    if False:
-        # all these graphs be taking too much gpu memory?
+    if args.dump_hiddens:
         extensions.append(
             DumpVariables("%s_hiddens" % situation, graph.inputs,
                           [v.copy(name="%s%s" % (k, suffix))
@@ -373,6 +372,7 @@ def main():
     parser.add_argument("--optimizer", choices="sgdmomentum adam rmsprop", default="rmsprop")
     parser.add_argument("--continue-from")
     parser.add_argument("--evaluate")
+    parser.add_argument("--dump-hiddens")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -436,7 +436,7 @@ def main():
                 channels,
                 prefix="%s_%s" % (which_set, situation), every_n_batches=validation_interval,
                 data_stream=get_stream(which_set=which_set, batch_size=args.batch_size,
-                                       num_examples=50000, length=args.length)))
+                                       num_examples=10000, length=args.length)))
 
     extensions.extend([
         TrackTheBest("valid_training_error_rate", "best_valid_training_error_rate"),
@@ -458,6 +458,10 @@ def main():
         data_stream=get_stream(which_set="train", batch_size=args.batch_size, length=args.length, augment=True),
         algorithm=algorithm, extensions=extensions, model=model)
 
+    if args.dump_hiddens:
+        dump_hiddens(args, main_loop)
+        return
+
     if args.evaluate:
         evaluate(args, main_loop)
         return
@@ -476,6 +480,16 @@ def transfer_parameters(src_main_loop, dest_main_loop):
         dest_parameter = dest_parameters[name]
         assert dest_parameter.get_value().shape == src_parameter.get_value().shape
         dest_parameter.set_value(src_parameter.get_value())
+
+def dump_hiddens(args, main_loop):
+    # load parameters of trained model
+    trained_main_loop = load(args.dump_hiddens)
+    transfer_parameters(trained_main_loop, main_loop)
+    del trained_main_loop
+
+    for extension in main_loop.extensions:
+        if isinstance(extension, DumpVariables):
+            extension.do("after_training")
 
 def evaluate(args, main_loop):
     # load parameters of trained model
