@@ -283,6 +283,11 @@ At test time we use estimates obtained by averaging the minibatch estimates over
 \section{Initializing $\gamma$ for Gradient Flow}
 \label{sec:activation-variance}
 
+Although batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
+common practice is to normalize to unit variance.
+We suspect that the previous difficulties with recurrent batch normalization reported in the literature~\cite{cesar,baidu}
+are largely due to improper initialization of the batch normalization parameters, and $\gamma$ in particular.
+
 \begin{figure}[!ht]
   \center%
   \subfigure[
@@ -306,10 +311,6 @@ Influence of pre-activation variance on gradient propagation.
   \label{fig:variance}
 \end{figure}
 
-Although batch normalization allows for easy control of the pre-activation variance through the $\gamma$ parameters,
-common practice is to normalize to unit variance.
-We suspect that the previous difficulties with recurrent batch normalization reported in the literature~\cite{cesar,baidu}
-are largely due to improper initialization of the batch normalization parameters, and $\gamma$ in particular.
 In this section we demonstrate the impact of $\gamma$ on gradient flow.
 
 In Figure~\ref{fig:rnn_grad_prop} we show how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
@@ -342,16 +343,6 @@ Note that for all the experiments, we initialize the batch normalization scale a
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
 
-\begin{figure}
-\center
-\includegraphics[width=6.7cm]{figures/unpermuted_valid.pdf}
-\includegraphics[width=6.7cm]{figures/permuted_valid.pdf}
-\caption{Accuracy on the validation set for the pixel by pixel MNIST classification tasks. The batch-normalized LSTM is able to converge faster relatively to a baseline LSTM.
-  Batch-normalized  LSTM also shows some improve generalization on the permuted sequential MNIST that require to preserve long-term memory information.}
-\label{fig:seqmnist_valid}
-\end{figure}
-
-
 We evaluate our batch-normalized LSTM on a sequential version of the MNIST classification task~\cite{le2015simple}.
 The model processes each image one pixel at a time and finally predicts the label.
 We consider both sequential MNIST tasks, MNIST and permuted MNIST ($p$MNIST).
@@ -372,8 +363,18 @@ We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 %[but is that an artifact of classification at the end?]
 
+\begin{figure}[!t]
+\center
+\includegraphics[width=6.7cm]{figures/unpermuted_valid.pdf}
+\includegraphics[width=6.7cm]{figures/permuted_valid.pdf}
+\caption{Accuracy on the validation set for the pixel by pixel MNIST classification tasks. The batch-normalized LSTM is able to converge faster relatively to a baseline LSTM.
+  Batch-normalized  LSTM also shows some improve generalization on the permuted sequential MNIST that require to preserve long-term memory information.}
+\label{fig:seqmnist_valid}
+\end{figure}
 
-\begin{table}
+
+
+\begin{table}[!hb]
 \center
 \begin{tabular}{@{}lcc@{}}
   \toprule
@@ -406,9 +407,7 @@ Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop mo
 Recurrent batch normalization leads to better test score, especially for $p$MNIST where models have to leverage long-term temporal depencies.
 In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM achieves state of the art on both MNIST and $p$MNIST.
 
-\subsection{Character-level Penn Treebank}
-
-\begin{figure}
+\begin{figure}[!ht]
   \center%
   \subfigure[
     Performance in bits-per-character on length-100 subsequences of the Penn Treebank
@@ -429,7 +428,9 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \label{fig:ptb}
 \end{figure}
 
-\begin{table}
+\subsection{Character-level Penn Treebank}
+
+\begin{table}[!hb]
   \center
 \begin{minipage}[t]{6.5cm}
 \begin{tabular}{@{}lc@{}}
@@ -511,7 +512,13 @@ We observe that BN-LSTM obtains a significant performance improvement over the L
 
 \subsection{Teaching Machines to Read and Comprehend}
 
-\begin{figure}
+To demonstrate the generality and practical applicability of our reparameterization,
+we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.
+We evaluate two variants.
+The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
+We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
+
+\begin{figure}[!hb]
 \center
 \includegraphics[width=0.95\textwidth]{figures/attr_valid.pdf}
 \caption{
@@ -522,12 +529,6 @@ As detailed in the text, the theoretical lower bound on the error rate on this t
 }
 \label{fig:attr_valid}
 \end{figure}
-
-To demonstrate the generality and practical applicability of our reparameterization,
-we explore the use of batch-normalized LSTM in a unidirectional Attentive Reader Model~\cite{attentivereader}.
-We evaluate two variants.
-The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
-We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
 
 All three variants are trained using the exact same hyperparameters.
 The hidden state is composed of 240 units.
