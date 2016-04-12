@@ -129,9 +129,9 @@ of the proposed reparameterization on a variety of tasks.
 Long Short-Term Memory (LSTM) networks are an instance of a more general class of recurrent neural networks (RNNs),
 which we shall briefly review.
 Given an input sequence $\mat{X} = ( \vect{x}_1, \vect{x}_2, \ldots, \vect{x}_T )$,
-an RNN defines a sequence of hidden states $h_t$ according to
+an RNN defines a sequence of hidden states $\vect{h}_t$ according to
 \begin{eqnarray}
-  \mat{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b}),
+  \vect{h}_t = \phi(\mat{W}_h \vect{h}_{t-1} + \mat{W}_x  \vect{x}_t + \vect{b}),
 \end{eqnarray}
 where $\mat{W}_h \in \reals^{d_h \times d_h}, \mat{W}_x \in \reals^{d_x \times d_h}, \vect{b} \in \reals^{d_h}$
 and the initial state $\vect{h}_0 \in \reals^{d_h}$ % I've put this back because I believe we do need to say something about the initial state -- tim
@@ -141,7 +141,7 @@ A popular choice for the activation function $\phi(\ \cdot\ )$ is $\tanh$.
 RNNs are popular in sequence modeling because of their natural ability to process variable-length sequences.
 Training RNNs using first-order stochastic gradient descent (SGD) however is notoriously difficult
 due to the well-known problem of exploding/vanishing gradients~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
-Gradient vanishing occurs when states $h_t$ are not influenced by small changes in much earlier states $h_{\tau}$, $t \ll \tau$,
+Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small changes in much earlier states $\vect{h}_{\tau}$, $t \ll \tau$,
 preventing learning of long-term dependencies in the input data.
 While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning},
 it has been demonstrated that different RNN reparameterizations, such as the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn}
@@ -473,7 +473,7 @@ according to the train/valid/test partition of~\cite{mikolov2012subword}.
 For training, we segment the training sequence into examples of length 100.
 The training sequence does not cleanly divide by 100, so for each epoch we randomly crop a subsequence that does and segment that instead.
 
-Our baseline is an LSTM with 1000 units, trained to predict the next character using a softmax classifier on the hidden state $h_t$.
+Our baseline is an LSTM with 1000 units, trained to predict the next character using a softmax classifier on the hidden state $\vect{h}_t$.
 We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate 0.002.
@@ -500,7 +500,7 @@ We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and 
 We train on nonoverlapping sequences of length 180.
 
 Both our baseline and batch-normalized models are LSTMs with 2000 units, trained to predict the next character using a softmax classifier
-on the hidden state $h_t$. We use stochastic gradient descent on minibatches of size 128,
+on the hidden state $\vect{h}_t$. We use stochastic gradient descent on minibatches of size 128,
 with gradient clipping at 1.0 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate 0.001.
 All weight matrices were initialized to be orthogonal.
