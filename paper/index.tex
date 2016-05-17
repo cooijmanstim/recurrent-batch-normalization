@@ -1,7 +1,8 @@
 \documentclass{article} % For LaTeX2e
 \pdfoutput=1 % for arxiv to accept pdf figures
 \usepackage[utf8]{inputenc}
-\usepackage{nips15submit_e,times}
+\usepackage[T1]{fontenc}
+\usepackage{nips_2016}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{subfigure}
@@ -18,7 +19,10 @@
 \usepackage{url}
 \usepackage{booktabs}
 \renewcommand{\arraystretch}{1.2}
-%\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
+
+% uncomment for camera-ready version
+% also uncomment acknowledgements below
+% \usepackage[final]{nips_2016}
 
 \title{Recurrent Batch Normalization}
 
@@ -39,8 +43,6 @@ $^\star$ \texttt{firstname.lastname@umontreal.ca} \\
 
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
-
-\nipsfinalcopy % Uncomment for camera-ready version
 
 \usepackage{amsfonts}
 \usepackage{amsmath}
@@ -562,16 +564,16 @@ our proposed BN-LSTM trains faster and generalizes better on a variety of tasks 
 We have argued that proper initialization of the batch normalization parameters is crucial,
 and suggest that previous difficulties~\cite{cesar, baidu} were due in large part to improper initialization.
 
-\section*{Acknowledgements}
+%\section*{Acknowledgements}
 
-The authors would like to acknowledge the support of the following agencies for
-research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
-the Canada Research Chairs and CIFAR.
-We thank the developers of Theano~\cite{theano2} and the
-Blocks and Fuel~\cite{blocks} libraries for developing such powerful tools for scientific computing.
-We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
+%The authors would like to acknowledge the support of the following agencies for
+%research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
+%the Canada Research Chairs and CIFAR.
+%We thank the developers of Theano~\cite{theano2} and the
+%Blocks and Fuel~\cite{blocks} libraries for developing such powerful tools for scientific computing.
+%We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
-\bibliographystyle{nips2015}
+\bibliographystyle{nips2016}
 
 \end{document}
