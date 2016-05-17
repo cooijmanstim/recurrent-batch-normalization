@@ -263,7 +263,7 @@ The batch normalization transform relies on batch statistics to standardize the 
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
 However, we have found that simply averaging statistics over time severely degrades performance.
-Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
+Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly (Figure~\ref{fig:popstat_stationarity}).
 Consequently, we recommend using separate statistics for each timestep to preserve
 information of the initial transient phase in the activations.\footnote{
 Note that we separate \emph{only} the statistics over time and not the $\gamma$ and $\beta$ parameters.}
@@ -289,6 +289,8 @@ Although batch normalization allows for easy control of the pre-activation varia
 common practice is to normalize to unit variance.
 We suspect that the previous difficulties with recurrent batch normalization reported in the literature~\cite{cesar,baidu}
 are largely due to improper initialization of the batch normalization parameters, and $\gamma$ in particular.
+In this section we demonstrate the impact of $\gamma$ on gradient flow.
+
 
 \begin{figure}[!ht]
   \center%
@@ -313,15 +315,13 @@ Influence of pre-activation variance on gradient propagation.
   \label{fig:variance}
 \end{figure}
 
-In this section we demonstrate the impact of $\gamma$ on gradient flow.
-
 In Figure~\ref{fig:rnn_grad_prop} we show how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
 Since backpropagation operates in reverse, the plot is best read from right to left.
 The quantity plotted is the norm of the gradient of the loss with respect to the hidden state at different time steps.
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-Figure~\ref{fig:tanh_grad} empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
+Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
 We drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1,
 and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$.
 The distribution of this value (mean and interquartile range) as a function of the standard deviation of $x$ is shown in Figure~\ref{fig:tanh_grad}.
