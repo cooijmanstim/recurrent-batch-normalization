@@ -138,7 +138,6 @@ Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small c
 preventing learning of long-term dependencies in the input data.
 While the long-term dependencies problem is unsolvable in the absolute~\cite{bengio1994learning},
 its effects can be mitigated through architectural variations such as LSTM~\cite{lstm}, GRU~\cite{cho2014learning} and $i$RNN/$u$RNN~\cite{le2015simple,urnn}.
-
 In what follows, we focus on the LSTM architecture~\cite{lstm} with recurrent transition given by
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -184,7 +183,6 @@ where changing the parameters of a layer affects the distribution of the inputs 
 Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
 It does so by standardizing the activations using statistical estimates of their means and standard deviations.
 However, it does not decorrelate the activations as the matrix inversion involved would be too expensive.
-
 The batch normalizing transform is as follows:
 
 \begin{align}
