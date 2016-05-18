@@ -104,7 +104,7 @@ because of exploding gradients due to repeated rescaling.
 Our findings run counter to this hypothesis.
 We show that it is both possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
 In particular, we describe a reparameterization of LSTM (Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization
-and demonstrate  that doing so speeds up optimization and improves generalization.
+and demonstrate that it is easier to optimize and generalizes better.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
 of the batch normalization parameters is crucial to avoiding vanishing gradient (Section~\ref{sec:activation-variance}).
 We evaluate our proposal on several sequential problems and show (Section~\ref{sec:experiments}) that our
