@@ -131,14 +131,13 @@ and the initial state $\vect{h}_0 \in \reals^{d_h}$ % I've put this back because
 are model parameters.
 A popular choice for the activation function $\phi(\ \cdot\ )$ is $\tanh$.
 
-RNNs are popular in sequence modeling because of their natural ability to process variable-length sequences.
+RNNs are popular in sequence modeling thanks to their natural ability to process variable-length sequences.
 Training RNNs using first-order stochastic gradient descent (SGD) however is notoriously difficult
 due to the well-known problem of exploding/vanishing gradients~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small changes in much earlier states $\vect{h}_{\tau}$, $t \ll \tau$,
 preventing learning of long-term dependencies in the input data.
-While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning},
-it has been demonstrated that different RNN reparameterizations, such as the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn}
-can help mitigate the vanishing gradient problem.
+While the long-term dependencies problem is unsolvable in the absolute~\cite{bengio1994learning},
+its effects can be mitigated through architectural variations such as LSTM~\cite{lstm}, GRU~\cite{cho2014learning} and $i$RNN/$u$RNN~\cite{le2015simple,urnn}.
 
 In what follows, we focus on the LSTM architecture~\cite{lstm} with recurrent transition given by
 \begin{eqnarray}
@@ -294,7 +293,7 @@ High variance causes vanishing gradient.
   }%
   \hspace{2mm}%
   \subfigure[
-Empirical expected derivative of $\tanh$ nonlinearity as a function of input variance.
+Empirical expected derivative and interquartile range of $\tanh$ nonlinearity as a function of input variance.
 High variance causes saturation, which decreases the expected derivative.
 ]{%
     \label{fig:tanh_grad}
@@ -312,10 +311,8 @@ The quantity plotted is the norm of the gradient of the loss with respect to the
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-Figure~\ref{fig:tanh_grad} shows empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
-We drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1,
-and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$.
-The distribution of this value (mean and interquartile range) as a function of the standard deviation of $x$ is shown in Figure~\ref{fig:tanh_grad}.
+To demonstrate what we think is the cause of this vanishing, we drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1, and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$ for each.
+Figure~\ref{fig:tanh_grad} shows the empirical distribution of the derivative as a function of standard deviation.
 When the input standard deviation is low, the input tends to be close to the origin where the derivative is close to 1.
 As the standard deviation increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
 At unit standard deviation, the expected derivative is much smaller than 1.
@@ -327,11 +324,8 @@ Our choice of 0.1 seems to work well across tasks.
 \section{Experiments}
 \label{sec:experiments}
 
-This section presents an empirical evaluation of the proposed batch-normalized LSTM on four different tasks. Results show that batch-normalized LSTM achieves convergence faster than a baseline LSTM on all the tasks, and, can also lead to better generalization.
-
+This section presents an empirical evaluation of the proposed batch-normalized LSTM on four different tasks.
 Note that for all the experiments, we initialize the batch normalization scale and shift parameters $\gamma$ and $\beta$ to $0.1$ and $0$ respectively.
-
-
 
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
@@ -339,7 +333,7 @@ Note that for all the experiments, we initialize the batch normalization scale a
 We evaluate our batch-normalized LSTM on a sequential version of the MNIST classification task~\cite{le2015simple}.
 The model processes each image one pixel at a time and finally predicts the label.
 We consider both sequential MNIST tasks, MNIST and permuted MNIST ($p$MNIST).
-In MNIST, the pixels are processed from left to right, top to bottom.
+In MNIST, the pixels are processed in scanline order.
 In $p$MNIST the pixels are processed in a fixed random order.
 
 Our baseline consists of an LSTM with 100 hidden units, with a softmax classifier to produce a prediction from the final hidden state.
@@ -351,7 +345,7 @@ We apply gradient clipping at 1 to avoid exploding gradients.
 The in-order MNIST task poses a unique problem for our model:
 the input for the first hundred or so timesteps is constant across examples since the upper pixels are almost always black.
 This causes the variance of the hidden states to be exactly zero for a long period of time.
-Normalizing these zero-variance activations involves division by a small number at many timesteps, which causes the gradient to explode.
+Normalizing these zero-variance activations involves dividing zero by a small number at many timesteps, which does not affect the forward-propagated activations but causes the back-propagated gradient to explode.
 We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 %[but is that an artifact of classification at the end?]
