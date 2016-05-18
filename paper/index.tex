@@ -252,8 +252,8 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 The batch normalization transform relies on batch statistics to standardize the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
-However, we have found that simply averaging statistics over time severely degrades performance.
-Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly (Figure~\ref{fig:popstat_stationarity}).
+However, we find that simply averaging statistics over time severely degrades performance.
+Although LSTM activations do converge to a stationary distribution, we observe that their statistics during the initial transient differ significantly (Figure~\ref{fig:popstat_stationarity}).
 Consequently, we recommend using separate statistics for each timestep to preserve
 information of the initial transient phase in the activations.\footnote{
 Note that we separate \emph{only} the statistics over time and not the $\gamma$ and $\beta$ parameters.}
@@ -473,17 +473,15 @@ We show the learning curves in Figure~\ref{fig:ptb_valid}.
 BN-LSTM converges faster and generalizes better than the LSTM baseline.
 Figure~\ref{fig:ptb_lengths} shows the generalization of our model to longer sequences.
 We observe that using the population statistics improves generalization performance,
-which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
+which confirms that repeating the last population statistic (cf. Section~\ref{sec:recurrent-batch-normalization})
 is a viable strategy.
 In table~\ref{tab:ptb_test} we report the performance of our best models (early-stopped on validation performance)
 on the Penn Treebank test sequence and compare them to previous work.
-It shows that our BN-LSTM model compares favorably to state-of-the-art models.
-
-
+Our BN-LSTM model compares favorably to state-of-the-art models.
 
 \subsection{Text8}
 
-We evaluate our model on a second character-level language modeling task on the text8 dataset~\cite{mahoney2009large}.
+We evaluate our model on a second character-level language modeling task on the much larger text8 dataset~\cite{mahoney2009large}.
 This dataset is derived from Wikipedia and consists of a sequence of 100M characters including only alphabetical characters and spaces.
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
@@ -535,8 +533,7 @@ During the training, we randomly sample the examples with replacement and shuffl
 
 Figure~\ref{fig:attr_valid} shows the learning curves for the different variants of the attentive reader.
 BN-LSTM trains dramatically faster than the LSTM baseline.
-BN-everywhere, applying batch normalization in the attention computations as well, in turn shows a significant
-improvement over BN-LSTM.
+BN-everywhere in turn shows a significant improvement over BN-LSTM.
 In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
 We emphasize that these are preliminary results on the validation set; full results are forthcoming.
 
