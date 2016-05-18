@@ -103,28 +103,19 @@ because of exploding gradients due to repeated rescaling.
 
 Our findings run counter to this hypothesis.
 We show that it is both possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
-In particular, we describe a reparameterization of LSTM that involves batch normalization
-and demonstrate that doing so speeds up optimization and improves generalization.
+In particular, we describe a reparameterization of LSTM (Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization
+and demonstrate  that doing so speeds up optimization and improves generalization.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
-of the batch normalization parameters is crucial to avoiding vanishing gradient.
-
-We evaluate our proposal on several sequential problems and show that our
+of the batch normalization parameters is crucial to avoiding vanishing gradient (Section~\ref{sec:activation-variance}).
+We evaluate our proposal on several sequential problems and show (Section~\ref{sec:experiments}) that our
 LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
 In particular, we achieve state-of-the-art performance on
 Sequential MNIST~\cite{le2015simple} and
 character-level language modeling on the text8~\cite{mahoney2009large} corpus.
 
-%% FIXME add section 4
-Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
-In Section~\ref{sec:recurrent-batch-normalization}, we discuss batch normalization in the recurrent setting.
-Section~\ref{sec:activation-variance} investigates the impact of the batch normalization scale parameter on the gradient back-propagation for
-recurrent models. We show in Section~\ref{sec:experiments} our evaluation
-of the proposed reparameterization on a variety of tasks.
-
 \section{Prerequisites}
 \label{sec:prerequisites}
-
 
 \subsection{LSTM}
 
