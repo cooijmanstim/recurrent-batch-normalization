@@ -518,22 +518,25 @@ The hidden state is composed of 240 units.
 We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 10 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate $8 \times 10^{-5}$.
+These hyperparameters were chosen because they work well for the baseline.
 
-We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task using the CNN corpus, with placeholders to replace the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
-However contrary to~\cite{attentivereader}, we limit the number of sentences in each passage to 4 in order to save computation.
-We choose which sentences to keep by performing a string matching between the question and the passage.
-We rank the sentences in the text according to the string matching score and use only the top 4 sentences for each passage in the dataset.
-The training, validation and test sets are all preprocessed using this same procedure.
-After this procedure, the validation set has a recall of $57\%$ -- the passage contains the answer in only $57\%$ of the passage/question pairs.
-This puts an upper bound on the accuracy that can be achieved.
+We evaluate the models on the question answering task using the CNN corpus, with placeholders for the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
+During training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch.
+We use a vocabulary of 65829 words.
 
-During the training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch. We use the whole vocabulary for the input and the answer which consists of 65829 unique words.
+We deviate from~\cite{attentivereader} in order to save computation:
+we use only the 4 most relevant sentences from the description,
+as identified by a string matching procedure.
+Both the training and validation sets are preprocessed in this way.
+This heuristic is imprecise and sometimes strips the answers from the passage.
+This puts an upper bound of $43\%$ on the accuracy that can be achieved.
 
 Figure~\ref{fig:attr_valid} shows the learning curves for the different variants of the attentive reader.
 BN-LSTM trains dramatically faster than the LSTM baseline.
 BN-everywhere in turn shows a significant improvement over BN-LSTM.
 In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
-We emphasize that these are preliminary results on the validation set; full results are forthcoming.
+The validation curves have minima of 0.503, 0.495 and 0.500 for the baseline, BN-LSTM and BN-everywhere respectively.
+We emphasize that these results were obtained without any tweaking -- all we did was introduce batch normalization.
 
 \section{Conclusion}
 
