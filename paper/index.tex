@@ -540,8 +540,8 @@ We emphasize that these results were obtained without any tweaking -- all we did
 
 For this experiment we followed the common practice of padding each batch of variable-length examples with zeros.
 However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
-To avoid this, we suggest either padding the data with repetitions or sharing the statistics of $\vect{x}_t$ over time as in~\cite{cesar}.
-However a proper investigation is left for future research.
+Although we obtain good results despite this effect, we suggest to address it, either by padding the data with repetitions or by sharing the statistics of $\vect{x}_t$ over time as in~\cite{cesar}.
+A proper investigation is left for future research.
 
 \section{Conclusion}
 
