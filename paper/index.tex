@@ -76,7 +76,7 @@ Recurrent neural network architectures such as LSTM~\cite{lstm} and GRU~\cite{ch
 state-of-the-art performance on a wide range of complex sequential problems including speech recognition~\cite{baidu},
 machine translation~\cite{bahdanau2014neural} and image and video captioning~\cite{xu2015show,yao2015describing}.
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and costly to train.
-Effective optimization of recurrent neural networks is an active area of study~\cite{pascanudifficulty,hessianfree,ollivier}.
+Effective optimization of recurrent neural networks is thus an active area of study~\cite{pascanudifficulty,hessianfree,ollivier}.
 
 It is known that for deep feed-forward neural networks, covariate shift~\cite{shimodaira2000improving,batchnorm}
 degrades the efficiency of training.
@@ -132,7 +132,7 @@ are model parameters.
 A popular choice for the activation function $\phi(\ \cdot\ )$ is $\tanh$.
 
 RNNs are popular in sequence modeling thanks to their natural ability to process variable-length sequences.
-Training RNNs using first-order stochastic gradient descent (SGD) however is notoriously difficult
+However, training RNNs using first-order stochastic gradient descent (SGD) is notoriously difficult
 due to the well-known problem of exploding/vanishing gradients~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small changes in much earlier states $\vect{h}_{\tau}$, $t \ll \tau$,
 preventing learning of long-term dependencies in the input data.
@@ -182,7 +182,7 @@ where changing the parameters of a layer affects the distribution of the inputs 
 
 Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
 It does so by standardizing the activations using statistical estimates of their means and standard deviations.
-However, it does not decorrelate the activations as the matrix inversion involved would be too expensive.
+However, it does not decorrelate the activations due to the computationally costly matrix inversion.
 The batch normalizing transform is as follows:
 
 \begin{align}
@@ -536,7 +536,7 @@ BN-LSTM trains dramatically faster than the LSTM baseline.
 BN-everywhere in turn shows a significant improvement over BN-LSTM.
 In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
 The validation curves have minima of 0.503, 0.495 and 0.500 for the baseline, BN-LSTM and BN-everywhere respectively.
-We emphasize that these results were obtained without any tweaking -- all we did was introduce batch normalization.
+We emphasize that these results were obtained without any tweaking -- all we did was to introduce batch normalization.
 
 For this experiment we followed the common practice of padding each batch of variable-length examples with zeros.
 However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
