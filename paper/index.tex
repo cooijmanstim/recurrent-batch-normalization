@@ -538,6 +538,11 @@ In addition, both BN-LSTM and BN-everywhere show a generalization benefit over t
 The validation curves have minima of 0.503, 0.495 and 0.500 for the baseline, BN-LSTM and BN-everywhere respectively.
 We emphasize that these results were obtained without any tweaking -- all we did was introduce batch normalization.
 
+For this experiment we followed the common practice of padding each batch of variable-length examples with zeros.
+However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
+To avoid this, we suggest either padding the data with repetitions or sharing the statistics of $\vect{x}_t$ over time as in~\cite{cesar}.
+However a proper investigation is left for future research.
+
 \section{Conclusion}
 
 Contrary to previous findings~\cite{cesar,baidu},
@@ -546,6 +551,7 @@ Indeed, doing so yields benefits similar to those of batch normalization in feed
 our proposed BN-LSTM trains faster and generalizes better on a variety of tasks including language modeling and question-answering.
 We have argued that proper initialization of the batch normalization parameters is crucial,
 and suggest that previous difficulties~\cite{cesar, baidu} were due in large part to improper initialization.
+Proper handling of variable-length training data is left for future research.
 
 %\section*{Acknowledgements}
 
