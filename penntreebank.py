@@ -250,14 +250,22 @@ class LSTM(object):
                     popstats_by_key[key][stat] = popstat
 
             atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
-            a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
-            b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
-            ab = a_normal + b_normal
+            if args.normalize_terms_separately:
+              ab = self.bn_a.construct_graph(atilde + btilde, baseline=args.baseline, **popstats_by_key["a"])
+            else:
+              a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
+              b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
+              ab = a_normal + b_normal
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
             c_normal, c_mean, c_var = self.bn_c.construct_graph(c, baseline=args.baseline, **popstats_by_key["c"])
-            h = dummy_h + o * self.activation(c_normal)
+
+            c_output = c_normal if args.normalize_output else c
+            h = dummy_h + o * self.activation(c_output)
+
+            if args.normalize_cell:
+              c = c_normal
 
             return [locals()[name] for name in output_names]
 
@@ -386,6 +394,9 @@ if __name__ == "__main__":
     parser.add_argument("--activation", choices=list(activations.keys()), default="tanh")
     parser.add_argument("--optimizer", choices="sgdmomentum rmsprop adam".split(), default="rmsprop")
     parser.add_argument("--learning-rate-decay", type=float, default=0.0)
+    parser.add_argument("--normalize-terms-separately", action="store_false", help="Normalize recurrent and input terms separately")
+    parser.add_argument("--normalize-cell", action="store_true", help="Pass normalized cell on to next step rather than just use it for output")
+    parser.add_argument("--normalize-output", action="store_false", help="Normalize cell before using it for output")
     parser.add_argument("--continue-from")
     args = parser.parse_args()
 
