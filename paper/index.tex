@@ -385,11 +385,11 @@ Additionally, we observe that BN-LSTM generalizes significantly better on $p$MNI
 It has been highlighted in~\cite{urnn} that
 $p$MNIST contains many longer term dependencies across pixels than in
 the original pixel ordering, where a lot of structure is local.
-A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this tasks.
+A recurrent network therefore needs to characterize dependencies across varying time scales in order to solve this task.
 Our results suggest that BN-LSTM is better able to capture these long-term dependencies.
 
 Table~\ref{tab:seqmnist_test} reports the test set accuracy of the early stop model for LSTM and BN-LSTM using the population statistics.
-Recurrent batch normalization leads to better test score, especially for $p$MNIST where models have to leverage long-term temporal depencies.
+Recurrent batch normalization leads to a better test score, especially for $p$MNIST where models have to leverage long-term temporal depencies.
 In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM achieves state of the art on both MNIST and $p$MNIST.
 
 \begin{figure}[!ht]
