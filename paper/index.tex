@@ -136,7 +136,7 @@ However, training RNNs using first-order stochastic gradient descent (SGD) is no
 due to the well-known problem of exploding/vanishing gradients~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small changes in much earlier states $\vect{h}_{\tau}$, $t \ll \tau$,
 preventing learning of long-term dependencies in the input data.
-While the long-term dependencies problem is unsolvable in the absolute~\cite{bengio1994learning},
+Although learning long-term dependencies is fundamentally difficult~\cite{bengio1994learning},
 its effects can be mitigated through architectural variations such as LSTM~\cite{lstm}, GRU~\cite{cho2014learning} and $i$RNN/$u$RNN~\cite{le2015simple,urnn}.
 In what follows, we focus on the LSTM architecture~\cite{lstm} with recurrent transition given by
 \begin{eqnarray}
