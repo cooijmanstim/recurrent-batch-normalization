@@ -181,7 +181,7 @@ In deep neural networks, this problem manifests as \emph{internal covariate shif
 where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 
 Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
-It does so by standardizing the activations using statistical estimates of their means and standard deviations.
+It does so by standardizing the activations using empirical estimates of their means and standard deviations.
 However, it does not decorrelate the activations due to the computationally costly matrix inversion.
 The batch normalizing transform is as follows:
 
@@ -206,7 +206,7 @@ During inference, the statistics are typically estimated based on the entire tra
 \center
 \includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
 \caption{Convergence of population statistics to stationary distributions on the 
-Penn Treebank task. Only a random subset of population statistics is shown.}
+Penn Treebank task. Each curve corresponds to a single hidden unit. Only a random subset of units is shown.}
 \label{fig:popstat_stationarity}
 \end{figure}
 
@@ -344,7 +344,7 @@ The in-order MNIST task poses a unique problem for our model:
 the input for the first hundred or so timesteps is constant across examples since the upper pixels are almost always black.
 This causes the variance of the hidden states to be exactly zero for a long period of time.
 Normalizing these zero-variance activations involves dividing zero by a small number at many timesteps, which does not affect the forward-propagated activations but causes the back-propagated gradient to explode.
-We work around this by injecting noise into the initial hidden states.
+We work around this by adding Gaussian noise to the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 %[but is that an artifact of classification at the end?]
 
