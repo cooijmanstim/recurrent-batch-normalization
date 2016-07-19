@@ -251,14 +251,14 @@ class LSTM(object):
 
             atilde, btilde = T.dot(h, p.Wa), T.dot(x, p.Wx)
             if args.normalize_terms_separately:
+              a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
+              b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
+              ab = a_normal + b_normal
+            else:
               a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde + btilde, baseline=args.baseline, **popstats_by_key["a"])
               # making sure all names are still available
               b_normal, b_mean, b_var = a_normal, a_mean, a_var
               ab = a_normal
-            else:
-              a_normal, a_mean, a_var = self.bn_a.construct_graph(atilde, baseline=args.baseline, **popstats_by_key["a"])
-              b_normal, b_mean, b_var = self.bn_b.construct_graph(btilde, baseline=args.baseline, **popstats_by_key["b"])
-              ab = a_normal + b_normal
             g, f, i, o = [fn(ab[:, j * args.num_hidden:(j + 1) * args.num_hidden])
                           for j, fn in enumerate([self.activation] + 3 * [T.nnet.sigmoid])]
             c = dummy_c + f * c + i * g
