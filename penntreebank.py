@@ -480,7 +480,7 @@ if __name__ == "__main__":
         extensions.append(ProgressBar())
 
     extensions.extend([
-        Timing(),
+        Timing(after_batch=True),
         Printing(),
         PrintingTo("log"),
     ])
