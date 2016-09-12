@@ -15,6 +15,13 @@ for i, path in enumerate(paths):
                           path=path,
                           data=pkl.load(open(path))))
 
+def dump(path):
+    data = dict((instance["label"],
+                 dict(train=instance["data"]["train_err_ave"],
+                      valid=instance["data"]["valid_errs"]))
+                for instance in instances)
+    pkl.dump(data, open(path, "wb"))
+
 import pdb; pdb.set_trace()
 
 colors = "r b g purple maroon darkslategray darkolivegreen orangered".split()
