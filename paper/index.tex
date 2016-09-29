@@ -2,7 +2,7 @@
 \pdfoutput=1 % for arxiv to accept pdf figures
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{nips_2016}
+\usepackage{iclr2017_conference}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{subfigure}
@@ -20,25 +20,12 @@
 \usepackage{booktabs}
 \renewcommand{\arraystretch}{1.2}
 
-% uncomment for camera-ready version
-% also uncomment acknowledgements below
-% \usepackage[final]{nips_2016}
-
 \title{Recurrent Batch Normalization}
 
 \author{
-Tim Cooijmans$^\dagger$ \\
-\And
-Nicolas Ballas$^\star$ \\
-\And
-C\'esar Laurent$^\star$ \\
-\And
-Çağlar Gülçehre$^\star$ \\
-\And
-Aaron Courville$^\star$\\
-MILA - Universit\'e de Montr\'eal\\
-$^\dagger$ \texttt{lastname.firstname@gmail.com} \\
-$^\star$ \texttt{firstname.lastname@umontreal.ca} \\
+Tim Cooijmans, Nicolas Ballas, C\'esar Laurent, Çağlar Gülçehre \& Aaron Courville \\
+MILA - Universit\'e de Montr\'eal \\
+\texttt{firstname.lastname@umontreal.ca} \\
 }
 
 \newcommand{\fix}{\marginpar{FIX}}
@@ -54,7 +41,8 @@ $^\star$ \texttt{firstname.lastname@umontreal.ca} \\
 \newcommand{\reals}{\mathbb{R}}
 \newcommand{\given}{\vert}
 
-\bibliographystyle{plain}
+% uncomment for camera-ready
+%\iclrfinalcopy
 
 \begin{document}
 
@@ -562,6 +550,6 @@ and suggest that previous difficulties~\cite{cesar, baidu} were due in large par
 %We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
-\bibliographystyle{nips2016}
+\bibliographystyle{iclr2017_conference}
 
 \end{document}
