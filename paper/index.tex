@@ -1,7 +1,8 @@
 \documentclass{article} % For LaTeX2e
 \pdfoutput=1 % for arxiv to accept pdf figures
 \usepackage[utf8]{inputenc}
-\usepackage{nips15submit_e,times}
+\usepackage[T1]{fontenc}
+\usepackage{nips_2016}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{subfigure}
@@ -18,7 +19,10 @@
 \usepackage{url}
 \usepackage{booktabs}
 \renewcommand{\arraystretch}{1.2}
-%\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
+
+% uncomment for camera-ready version
+% also uncomment acknowledgements below
+% \usepackage[final]{nips_2016}
 
 \title{Recurrent Batch Normalization}
 
@@ -39,8 +43,6 @@ $^\star$ \texttt{firstname.lastname@umontreal.ca} \\
 
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
-
-\nipsfinalcopy % Uncomment for camera-ready version
 
 \usepackage{amsfonts}
 \usepackage{amsmath}
@@ -74,7 +76,7 @@ Recurrent neural network architectures such as LSTM~\cite{lstm} and GRU~\cite{ch
 state-of-the-art performance on a wide range of complex sequential problems including speech recognition~\cite{baidu},
 machine translation~\cite{bahdanau2014neural} and image and video captioning~\cite{xu2015show,yao2015describing}.
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and costly to train.
-Effective optimization of recurrent neural networks is an active area of study~\cite{pascanudifficulty,hessianfree,ollivier}.
+Effective optimization of recurrent neural networks is thus an active area of study~\cite{pascanudifficulty,hessianfree,ollivier}.
 
 It is known that for deep feed-forward neural networks, covariate shift~\cite{shimodaira2000improving,batchnorm}
 degrades the efficiency of training.
@@ -101,28 +103,19 @@ because of exploding gradients due to repeated rescaling.
 
 Our findings run counter to this hypothesis.
 We show that it is both possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
-In particular, we describe a reparameterization of LSTM that involves batch normalization
-and demonstrate that doing so speeds up optimization and improves generalization.
+In particular, we describe a reparameterization of LSTM (Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization
+and demonstrate that it is easier to optimize and generalizes better.
 In addition, we empirically analyze the gradient backpropagation and show that proper initialization
-of the batch normalization parameters is crucial to avoiding vanishing gradient.
-
-We evaluate our proposal on several sequential problems and show that our
+of the batch normalization parameters is crucial to avoiding vanishing gradient (Section~\ref{sec:activation-variance}).
+We evaluate our proposal on several sequential problems and show (Section~\ref{sec:experiments}) that our
 LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
 In particular, we achieve state-of-the-art performance on
 Sequential MNIST~\cite{le2015simple} and
 character-level language modeling on the text8~\cite{mahoney2009large} corpus.
 
-%% FIXME add section 4
-Section~\ref{sec:prerequisites} introduces RNNs and batch normalization in detail.
-In Section~\ref{sec:recurrent-batch-normalization}, we discuss batch normalization in the recurrent setting.
-Section~\ref{sec:activation-variance} investigates the impact of the batch normalization scale parameter on the gradient back-propagation for
-recurrent models. We show in Section~\ref{sec:experiments} our evaluation
-of the proposed reparameterization on a variety of tasks.
-
 \section{Prerequisites}
 \label{sec:prerequisites}
-
 
 \subsection{LSTM}
 
@@ -138,15 +131,13 @@ and the initial state $\vect{h}_0 \in \reals^{d_h}$ % I've put this back because
 are model parameters.
 A popular choice for the activation function $\phi(\ \cdot\ )$ is $\tanh$.
 
-RNNs are popular in sequence modeling because of their natural ability to process variable-length sequences.
-Training RNNs using first-order stochastic gradient descent (SGD) however is notoriously difficult
+RNNs are popular in sequence modeling thanks to their natural ability to process variable-length sequences.
+However, training RNNs using first-order stochastic gradient descent (SGD) is notoriously difficult
 due to the well-known problem of exploding/vanishing gradients~\cite{bengio1994learning,hochreiter1991untersuchungen,pascanudifficulty}.
 Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small changes in much earlier states $\vect{h}_{\tau}$, $t \ll \tau$,
 preventing learning of long-term dependencies in the input data.
-While the long-term dependencies problem is unsolvable in absolute~\cite{bengio1994learning},
-it has been demonstrated that different RNN reparameterizations, such as the LSTM~\cite{lstm}, GRU~\cite{cho2014learning} or $i$/$u$-RNN~\cite{le2015simple,urnn}
-can help mitigate the vanishing gradient problem.
-
+While the long-term dependencies problem is unsolvable in the absolute~\cite{bengio1994learning},
+its effects can be mitigated through architectural variations such as LSTM~\cite{lstm}, GRU~\cite{cho2014learning} and $i$RNN/$u$RNN~\cite{le2015simple,urnn}.
 In what follows, we focus on the LSTM architecture~\cite{lstm} with recurrent transition given by
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -183,23 +174,22 @@ information for long periods of time.
 
 \emph{Covariate shift}~\cite{shimodaira2000improving} is a phenomenon in machine learning where
 the features presented to a model change in distribution.
-In order for learning to succeed in the presence of covariance shift,
+In order for learning to succeed in the presence of covariate shift,
 the model's parameters must be adjusted not just to learn the concept at hand
 but also to adapt to the changing distribution of the inputs.
-In deep neural networks, this problem manifests as \emph{internal covariance shift}~\cite{batchnorm},
+In deep neural networks, this problem manifests as \emph{internal covariate shift}~\cite{batchnorm},
 where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
 
 Batch Normalization~\cite{batchnorm} is a recently proposed network reparameterization that aims to reduce internal covariate shift.
 It does so by standardizing the activations using statistical estimates of their means and standard deviations.
-However, it does not decorrelate the activations as the matrix inversion involved would be too expensive.
-
+However, it does not decorrelate the activations due to the computationally costly matrix inversion.
 The batch normalizing transform is as follows:
 
 \begin{align}
 \mathrm{BN}(\vect{h}; \gamma, \beta) =
   \beta + \gamma
-  \frac{\vect{h} -   \widehat{\mathbb{E  }}(\vect{h})}
-       {       \sqrt{\widehat{\mathrm{Var}}(\vect{h}) + \epsilon}}
+  \frac{\vect{h} -   \widehat{\mathbb{E  }}[\vect{h}]}
+       {       \sqrt{\widehat{\mathrm{Var}}[\vect{h}] + \epsilon}}
 \end{align}
 
 where $\vect{h} \in \reals^d$ is the vector of (pre)activations to be normalized, 
@@ -207,7 +197,7 @@ $\gamma \in \reals^d, \beta \in \reals^d$ are model parameters that determine th
 mean and standard deviation of the normalized activation, and $\epsilon \in \reals$ 
 is a regularization hyperparameter. The division should be understood to proceed elementwise.
 
-At training time, the statistics $\mathbb{E}(\vect{h})$ and $\mathrm{Var}(\vect{h})$ are estimated
+At training time, the statistics $\mathbb{E}[\vect{h}]$ and $\mathrm{Var}[\vect{h}]$ are estimated
 by the sample mean and sample variance of the current minibatch.
 This allows for backpropagation through the statistics, preserving the convergence properties of stochastic gradient descent.
 During inference, the statistics are typically estimated based on the entire training set, so as to produce a deterministic prediction.
@@ -260,8 +250,8 @@ In order to leave the LSTM dynamics intact and preserve the gradient flow throug
 The batch normalization transform relies on batch statistics to standardize the LSTM activations.
 It would seem natural to share the statistics that are used for normalization across time,
 just as recurrent neural networks share their parameters over time.
-However, we have found that simply averaging statistics over time severely degrades performance.
-Although LSTM activations do converge to a stationary distribution, we have empirically observed that their statistics during the initial transient differ significantly as figure~\ref{fig:popstat_stationarity} shows.
+However, we find that simply averaging statistics over time severely degrades performance.
+Although LSTM activations do converge to a stationary distribution, we observe that their statistics during the initial transient differ significantly (Figure~\ref{fig:popstat_stationarity}).
 Consequently, we recommend using separate statistics for each timestep to preserve
 information of the initial transient phase in the activations.\footnote{
 Note that we separate \emph{only} the statistics over time and not the $\gamma$ and $\beta$ parameters.}
@@ -287,6 +277,8 @@ Although batch normalization allows for easy control of the pre-activation varia
 common practice is to normalize to unit variance.
 We suspect that the previous difficulties with recurrent batch normalization reported in the literature~\cite{cesar,baidu}
 are largely due to improper initialization of the batch normalization parameters, and $\gamma$ in particular.
+In this section we demonstrate the impact of $\gamma$ on gradient flow.
+
 
 \begin{figure}[!ht]
   \center%
@@ -299,7 +291,7 @@ High variance causes vanishing gradient.
   }%
   \hspace{2mm}%
   \subfigure[
-Empirical expected derivative of $\tanh$ nonlinearity as a function of input variance.
+Empirical expected derivative and interquartile range of $\tanh$ nonlinearity as a function of input variance.
 High variance causes saturation, which decreases the expected derivative.
 ]{%
     \label{fig:tanh_grad}
@@ -311,18 +303,14 @@ Influence of pre-activation variance on gradient propagation.
   \label{fig:variance}
 \end{figure}
 
-In this section we demonstrate the impact of $\gamma$ on gradient flow.
-
 In Figure~\ref{fig:rnn_grad_prop} we show how the pre-activation variance impacts gradient propagation in a simple RNN on the sequential MNIST task described in Section~\ref{sec:seqmnist}.
 Since backpropagation operates in reverse, the plot is best read from right to left.
 The quantity plotted is the norm of the gradient of the loss with respect to the hidden state at different time steps.
 For large values of $\gamma$, the norm quickly goes to zero as gradient is propagated back in time.
 For small values of $\gamma$ the norm is nearly constant.
 
-Figure~\ref{fig:tanh_grad} empirically how the expected derivative of the $\tanh$ nonlinearity changes with the variance of the argument.
-We drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1,
-and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$.
-The distribution of this value (mean and interquartile range) as a function of the standard deviation of $x$ is shown in Figure~\ref{fig:tanh_grad}.
+To demonstrate what we think is the cause of this vanishing, we drew samples $x$ from a set of centered Gaussian distributions with standard deviation ranging from 0 to 1, and computed the derivative $\tanh'(x) = 1 - \tanh^2(x) \in [0, 1]$ for each.
+Figure~\ref{fig:tanh_grad} shows the empirical distribution of the derivative as a function of standard deviation.
 When the input standard deviation is low, the input tends to be close to the origin where the derivative is close to 1.
 As the standard deviation increases, the expected derivative decreases as the input is more likely to be in the saturation regime.
 At unit standard deviation, the expected derivative is much smaller than 1.
@@ -334,11 +322,8 @@ Our choice of 0.1 seems to work well across tasks.
 \section{Experiments}
 \label{sec:experiments}
 
-This section presents an empirical evaluation of the proposed batch-normalized LSTM on four different tasks. Results show that batch-normalized LSTM achieves convergence faster than a baseline LSTM on all the tasks, and, can also lead to better generalization.
-
+This section presents an empirical evaluation of the proposed batch-normalized LSTM on four different tasks.
 Note that for all the experiments, we initialize the batch normalization scale and shift parameters $\gamma$ and $\beta$ to $0.1$ and $0$ respectively.
-
-
 
 \subsection{Sequential MNIST}
 \label{sec:seqmnist}
@@ -346,7 +331,7 @@ Note that for all the experiments, we initialize the batch normalization scale a
 We evaluate our batch-normalized LSTM on a sequential version of the MNIST classification task~\cite{le2015simple}.
 The model processes each image one pixel at a time and finally predicts the label.
 We consider both sequential MNIST tasks, MNIST and permuted MNIST ($p$MNIST).
-In MNIST, the pixels are processed from left to right, top to bottom.
+In MNIST, the pixels are processed in scanline order.
 In $p$MNIST the pixels are processed in a fixed random order.
 
 Our baseline consists of an LSTM with 100 hidden units, with a softmax classifier to produce a prediction from the final hidden state.
@@ -358,7 +343,7 @@ We apply gradient clipping at 1 to avoid exploding gradients.
 The in-order MNIST task poses a unique problem for our model:
 the input for the first hundred or so timesteps is constant across examples since the upper pixels are almost always black.
 This causes the variance of the hidden states to be exactly zero for a long period of time.
-Normalizing these zero-variance activations involves division by a small number at many timesteps, which causes the gradient to explode.
+Normalizing these zero-variance activations involves dividing zero by a small number at many timesteps, which does not affect the forward-propagated activations but causes the back-propagated gradient to explode.
 We work around this by injecting noise into the initial hidden states.
 Although the normalization amplifies the noise to signal level, we find that it does not hurt performance compared to data-dependent ways of initializing the hidden states.
 %[but is that an artifact of classification at the end?]
@@ -486,17 +471,15 @@ We show the learning curves in Figure~\ref{fig:ptb_valid}.
 BN-LSTM converges faster and generalizes better than the LSTM baseline.
 Figure~\ref{fig:ptb_lengths} shows the generalization of our model to longer sequences.
 We observe that using the population statistics improves generalization performance,
-which confirms that repeating the last population statistic (cf. section~\ref{sec:recurrent-batch-normalization})
+which confirms that repeating the last population statistic (cf. Section~\ref{sec:recurrent-batch-normalization})
 is a viable strategy.
 In table~\ref{tab:ptb_test} we report the performance of our best models (early-stopped on validation performance)
 on the Penn Treebank test sequence and compare them to previous work.
-It shows that our BN-LSTM model compares favorably to state-of-the-art models.
-
-
+Our BN-LSTM model compares favorably to state-of-the-art models.
 
 \subsection{Text8}
 
-We evaluate our model on a second character-level language modeling task on the text8 dataset~\cite{mahoney2009large}.
+We evaluate our model on a second character-level language modeling task on the much larger text8 dataset~\cite{mahoney2009large}.
 This dataset is derived from Wikipedia and consists of a sequence of 100M characters including only alphabetical characters and spaces.
 We follow previous authors~\cite{mikolov2012subword,zhang2016architectural} and use the first 90M characters for training, the next 5M for validation and the final 5M characters for testing.
 We train on nonoverlapping sequences of length 180.
@@ -518,14 +501,14 @@ We evaluate two variants.
 The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
 We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
 
-\begin{figure}[!hb]
+\begin{figure}[!ht]
 \center
 \includegraphics[width=0.95\textwidth]{figures/attr_valid.pdf}
 \caption{
 Error rate on the validation set for the Attentive Reader models on a variant of the CNN QA task~\cite{attentivereader}.
 BN-LSTM converges much faster than the baseline LSTM.
 Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
-As detailed in the text, the theoretical lower bound on the error rate on this task is $43\%$.
+As detailed in the text, the theoretical lower bound on the error rate on this task is 43\%.
 }
 \label{fig:attr_valid}
 \end{figure}
@@ -535,23 +518,30 @@ The hidden state is composed of 240 units.
 We use stochastic gradient descent on minibatches of size 64,
 with gradient clipping at 10 and step rule determined by Adam~\cite{kingma2014adam}
 with learning rate $8 \times 10^{-5}$.
+These hyperparameters were chosen because they work well for the baseline.
 
-We evaluate the Attentive Reader Model along with our batch-normalized variants on the question answering task using the CNN corpus, with placeholders to replace the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
-However contrary to~\cite{attentivereader}, we limit the number of sentences in each passage to 4 in order to save computation.
-We choose which sentences to keep by performing a string matching between the question and the passage.
-We rank the sentences in the text according to the string matching score and use only the top 4 sentences for each passage in the dataset.
-The training, validation and test sets are all preprocessed using this same procedure.
-After this procedure, the validation set has a recall of $57\%$ -- the passage contains the answer in only $57\%$ of the passage/question pairs.
-This puts an upper bound on the accuracy that can be achieved.
+We evaluate the models on the question answering task using the CNN corpus, with placeholders for the named entities. We follow a similar preprocessing pipeline to~\cite{attentivereader}.
+During training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch.
+We use a vocabulary of 65829 words.
 
-During the training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch. We use the whole vocabulary for the input and the answer which consists of 65829 unique words.
+We deviate from~\cite{attentivereader} in order to save computation:
+we use only the 4 most relevant sentences from the description,
+as identified by a string matching procedure.
+Both the training and validation sets are preprocessed in this way.
+Due to imprecision this heuristic sometimes strips the answers from the passage,
+putting an upper bound of 57\% on the validation accuracy that can be achieved.
 
 Figure~\ref{fig:attr_valid} shows the learning curves for the different variants of the attentive reader.
 BN-LSTM trains dramatically faster than the LSTM baseline.
-BN-everywhere, applying batch normalization in the attention computations as well, in turn shows a significant
-improvement over BN-LSTM.
+BN-everywhere in turn shows a significant improvement over BN-LSTM.
 In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
-We emphasize that these are preliminary results on the validation set; full results are forthcoming.
+The validation curves have minima of 50.3\%, 49.5\% and 50.0\% for the baseline, BN-LSTM and BN-everywhere respectively.
+We emphasize that these results were obtained without any tweaking -- all we did was to introduce batch normalization.
+
+For this experiment we followed the common practice of padding each batch of variable-length examples with zeros.
+However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
+Although we obtain good results despite this effect, we suggest to address it, either by padding the data with repetitions or by sharing the statistics of $\vect{x}_t$ over time as in~\cite{cesar}.
+A proper investigation is left for future research.
 
 \section{Conclusion}
 
@@ -562,16 +552,16 @@ our proposed BN-LSTM trains faster and generalizes better on a variety of tasks 
 We have argued that proper initialization of the batch normalization parameters is crucial,
 and suggest that previous difficulties~\cite{cesar, baidu} were due in large part to improper initialization.
 
-\section*{Acknowledgements}
+%\section*{Acknowledgements}
 
-The authors would like to acknowledge the support of the following agencies for
-research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
-the Canada Research Chairs and CIFAR.
-We thank the developers of Theano~\cite{theano2} and the
-Blocks and Fuel~\cite{blocks} libraries for developing such powerful tools for scientific computing.
-We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
+%The authors would like to acknowledge the support of the following agencies for
+%research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
+%the Canada Research Chairs and CIFAR.
+%We thank the developers of Theano~\cite{theano2} and the
+%Blocks and Fuel~\cite{blocks} libraries for developing such powerful tools for scientific computing.
+%We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
-\bibliographystyle{nips2015}
+\bibliographystyle{nips2016}
 
 \end{document}
