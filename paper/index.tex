@@ -86,7 +86,7 @@ it has proven difficult to apply in recurrent architectures~\citep{cesar,baidu}.
 It has found limited use in stacked RNNs, where the normalization is applied ``vertically'',
 i.e. to the input of each RNN, but not ``horizontally'' between timesteps.
 RNNs are deepest in the time direction, and as such batch normalization would be most beneficial when applied horizontally.
-However,~\cite{cesar} hypothesized that applying batch normalization in this way hurts training
+However,~\citet{cesar} hypothesized that applying batch normalization in this way hurts training
 because of exploding gradients due to repeated rescaling.
 
 Our findings run counter to this hypothesis.
