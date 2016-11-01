@@ -552,4 +552,31 @@ and suggest that previous difficulties~\citep{cesar, baidu} were due in large pa
 \bibliography{index}
 \bibliographystyle{iclr2017_conference}
 
+\appendix
+
+\section{Sensitivity to initialization of $\gamma$}
+
+In Section~\ref{sec:activation-variance} we investigated the effect of initial $\gamma$ on gradient flow.
+To show the practical implications of this, we performed several experiments on the $p$MNIST and Penn Treebank benchmarks.
+The resulting performances are shown in Figure~\ref{fig:gammas}.
+
+The $p$MNIST training curves confirm that higher initial values of $\gamma$ are detrimental to the optimization of the model.
+For the Penn Treebank task however, the effect is gone.
+
+We believe this is explained by the difference in the nature of the two tasks.
+For $p$MNIST, the model absorbs the input sequence and only at the end of the sequence does it make a prediction on which it receives feedback.
+Learning from this feedback requires propagating the gradient all the way back through the sequence.
+
+In the Penn Treebank task on the other hand, the model makes a prediction at each timestep.
+At each step of the backward pass, a fresh learning signal is added to the backpropagated gradient.
+Essentially, the model is able to get off the ground by picking up short-term dependencies.
+This fails on $p$MNIST wich is dominated by long-term dependencies.~\cite{urnn}
+
+\begin{figure}%[!ht]
+\center
+\includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
+\caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
+\label{fig:gammas}
+\end{figure}
+
 \end{document}
