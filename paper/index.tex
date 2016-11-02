@@ -102,6 +102,9 @@ In particular, we achieve state-of-the-art performance on
 Sequential MNIST~\citep{le2015simple} and
 character-level language modeling on the text8~\citep{mahoney2009large} corpus.
 
+\citep{ba2016layer} independently developed a variant of batch normalization that is
+also applicable to recurrent neural networks and delivers similar improvements as our method.
+
 \section{Prerequisites}
 \label{sec:prerequisites}
 
@@ -254,10 +257,6 @@ During training we estimate the statistics across the minibatch, independently f
 At test time we use estimates obtained by averaging the minibatch estimates over the training set.
 
 
-%% [there is an annoying little detail here: there may be only a single example with length T, and so the population statistic is highly unreliable. in this case i would take an earlier population statistic instead, the exact choice determined by validation. how do we explain this concisely?]
-%% [additionally, we haven't actually dealt with variable-length training sequences yet. this is another technicality that's easily hacked around but people will want to know i guess.]
-
-
 \section{Initializing $\gamma$ for Gradient Flow}
 \label{sec:activation-variance}
 
@@ -403,9 +402,8 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 
 \subsection{Character-level Penn Treebank}
 
-\begin{table}[!hb]
+\begin{table}%[!hb]
   \center
-\begin{minipage}[t]{6.5cm}
 \begin{tabular}{@{}lc@{}}
   \toprule
   \bf Model & \bf Penn Treebank \\
@@ -421,14 +419,15 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \midrule
   Zoneout~\citep{krueger2016zoneout} & 1.28 \\
   HM-LSTM~\citep{chung2016hierarchical} & 1.24 \\
-  HyperNetworks~\citep{ha2016hypernetworks} & 1.22 \\
+  HyperNetworks~\citep{ha2016hypernetworks} & \textbf{1.22} \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test sequence.}
 \label{tab:ptb_test}
-\end{minipage}
-\hspace{1cm}
-\begin{minipage}[t]{4.5cm}
+\end{table}
+
+\begin{table}%[!hb]
+  \center
   \begin{tabular}{@{}lc@{}}
   \toprule
   \bf Model & \bf text8 \\
@@ -445,7 +444,6 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \end{tabular}
 \caption{Bits-per-character on the text8 test sequence.}
 \label{tab:text8_test}
-\end{minipage}
 \end{table}
 
 
@@ -485,12 +483,13 @@ with learning rate 0.001.
 All weight matrices were initialized to be orthogonal.
 
 We early-stop on validation performance and report the test performance of the resulting model in table~\ref{tab:text8_test}.
-We observe that BN-LSTM obtains a significant performance improvement over the LSTM baseline. In addition, our BN-LSTM model achieves state of the art. %FIXME
+We observe that BN-LSTM obtains a significant performance improvement over the LSTM baseline.
+\citep{chung2016hierarchical} has since improved on our performance.
 
 \subsection{Teaching Machines to Read and Comprehend}
 \label{sec:less-attr}
 
-Recently,~\citep{attentivereader} introduced a set of challenging benchmarks for natural language processing, along with neural network architectures to attack them.
+Recently,~\citep{attentivereader} introduced a set of challenging benchmarks for natural language processing, along with neural network architectures to address them.
 The tasks involve reading real news articles and answering questions about their content.
 Their principal model, the Attentive Reader, is a recurrent neural network that invokes an attention mechanism to locate relevant information in the document.
 Such models are notoriously hard to optimize and yet increasingly popular.
