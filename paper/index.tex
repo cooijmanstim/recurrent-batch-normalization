@@ -582,6 +582,7 @@ BN-e* and BN-e** converge faster yet, and reach lower minima: 47.1\% and 43.9\% 
 \end{table}
 
 We train and evaluate our best model, BN-e**, on the full task from~\citep{attentivereader}.
+On this dataset we had to reduce the number of hidden units to 120 to avoid severe overfitting.
 Training curves for BN-e** and a vanilla LSTM are shown in Figure~\ref{fig:attr_full_valid}.
 Table~\ref{tab:attr_full} reports performances of the early-stopped models.
 
