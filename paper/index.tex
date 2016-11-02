@@ -530,7 +530,7 @@ That is, we share statistics over time for normalization of the input terms $\ma
 but \emph{not} for the recurrent terms $\mat{W}_h \vect{h}_t$ or the cell output $\vect{c}_t$.
 Doing so avoids many issues involving degenerate statistics due to input sequence padding.
 
-Our fourth and final variant BN-e** is like the third variant but bidirectional.
+Our fourth and final variant BN-e** is like BN-e* but bidirectional.
 The main difficulty in adapting to bidirectional models also involves padding.
 Padding poses no problem as long as it is properly ignored (by not updating the hidden states based on padded regions of the input).
 However to perform the reverse application of a bidirectional model, it is common to simply reverse the padded sequences, thus moving the padding to the front.
