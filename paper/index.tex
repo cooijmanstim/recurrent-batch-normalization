@@ -418,6 +418,10 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \midrule
   LSTM (ours) & 1.38 \\
   BN-LSTM (ours) & 1.32 \\
+  \midrule
+  Zoneout~\citep{krueger2016zoneout} & 1.28 \\
+  HM-LSTM~\citep{chung2016hierarchical} & 1.24 \\
+  HyperNetworks~\citep{ha2016hyper} & 1.22 \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test sequence.}
@@ -434,7 +438,9 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   skipping RNN~\citep{pachitariu2013regularization} & 1.48 \\
   \midrule
   LSTM (ours) &  1.43 \\
-  BN-LSTM (ours) & \textbf{1.36} \\
+  BN-LSTM (ours) & 1.36 \\
+  \midrule
+  HM-LSTM~\citep{chung2016hierarchical} & \textbf{1.29} \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the text8 test sequence.}
@@ -479,7 +485,7 @@ with learning rate 0.001.
 All weight matrices were initialized to be orthogonal.
 
 We early-stop on validation performance and report the test performance of the resulting model in table~\ref{tab:text8_test}.
-We observe that BN-LSTM obtains a significant performance improvement over the LSTM baseline. In addition, our BN-LSTM  model achieves state of the art.
+We observe that BN-LSTM obtains a significant performance improvement over the LSTM baseline. In addition, our BN-LSTM model achieves state of the art. %FIXME
 
 \subsection{Teaching Machines to Read and Comprehend}
 \label{sec:less-attr}
