@@ -421,7 +421,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   \midrule
   Zoneout~\citep{krueger2016zoneout} & 1.28 \\
   HM-LSTM~\citep{chung2016hierarchical} & 1.24 \\
-  HyperNetworks~\citep{ha2016hyper} & 1.22 \\
+  HyperNetworks~\citep{ha2016hypernetworks} & 1.22 \\
   \bottomrule
 \end{tabular}
 \caption{Bits-per-character on the Penn Treebank test sequence.}
@@ -610,13 +610,30 @@ To get around this, we reverse only the unpadded portion of the input sequences 
 We have found that performance is best when we rely on \emph{sequencewise} normalization of the inputs as proposed by~\citep{cesar,baidu}.
 That is, we share statistics over time for normalization of the input terms $\mat{W}_x \vect{x}_t$,
 but \emph{not} for the recurrent terms $\mat{W}_h \vect{h}_t$ or the cell output $\vect{c}_t$.
-Doing so avoids many issues involving input sequence padding.
+Doing so avoids many issues involving degenerate statistics due to input sequence padding.
 
-After incorporating these improvements, our new results on the reduced task described in~\ref{sec:less-attr} are shown in Figure~\ref{fig:attr_valid2.pdf}.
+After incorporating these improvements, our new results on the reduced task described in~\ref{sec:less-attr} are shown in Figure~\ref{fig:attr_valid2}.
 
-/data/lisatmp4/ballasn/att\_reader/restrict
-restricted set
-improve by hyperparameter search
+\begin{figure}[!ht]
+  \center%
+  \subfigure[
+partial CNN dataset
+As detailed in the text, the theoretical lower bound on the error rate on this task is 43\%.
+]{%
+    \label{fig:attr_valid2}
+    \includegraphics[width=.45\textwidth]{figures/attr_valid2.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+full CNN dataset.
+]{%
+    \label{fig:attr_full_valid}
+    \includegraphics[width=.45\textwidth]{figures/attr_full_valid.pdf}
+  }
+  \caption{Training curves on the CNN question-answering tasks.}
+  \label{fig:attr2}
+\end{figure}
+
 (lr 8e-4 batch size 40)
 accuracies valid
 previously: 50.0
@@ -625,14 +642,11 @@ bidir: 43.9
 
 On the full task from~\citet{attentivereader}, our results are
 
-/data/lisatmp4/ballasn/att\_reader/full
-full set
-280 units overfits
-120 units bn-everywhere much better
-
 accuracies valid/test
 baseline: 54.5/55.0
-bn-bidir-120-units: 62.1/63.7
+bn-bidir-120-units: 62.1/63.7 (120 units, lr8e-4 batch size 40)
 deepmind: 61.6/63.0
+
+shown in Figure~\ref{fig:attr_full_valid}.
 
 \end{document}
