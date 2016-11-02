@@ -497,30 +497,47 @@ Such models are notoriously hard to optimize and yet increasingly popular.
 
 To demonstrate the generality and practical applicability of our proposal,
 we use batch normalization to drastically improve training of the Attentive Reader Model.
-We evaluate two variants.
-The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
-We further introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities, to obtain another variant which we term BN-everywhere.
 
 \begin{figure}[!ht]
-\center
-\includegraphics[width=0.95\textwidth]{figures/attr_valid.pdf}
-\caption{
+  \center%
+  \subfigure[
 Error rate on the validation set for the Attentive Reader models on a variant of the CNN QA task~\citep{attentivereader}.
-BN-LSTM converges much faster than the baseline LSTM.
-Applying batch normalization in the attention computations as well (``BN-everywhere'') converges faster yet.
 As detailed in the text, the theoretical lower bound on the error rate on this task is 43\%.
-}
-\label{fig:attr_valid}
+]{%
+    \label{fig:attr_valid2}
+    \includegraphics[width=.45\textwidth]{figures/attr_valid2.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+full CNN dataset.
+]{%
+    \label{fig:attr_full_valid}
+    \includegraphics[width=.45\textwidth]{figures/attr_full_valid.pdf}
+  }
+  \caption{Training curves on the CNN question-answering tasks.}
+  \label{fig:attr2}
 \end{figure}
 
-All three variants are trained using the exact same hyperparameters.
-The hidden state is composed of 240 units.
-We use stochastic gradient descent on minibatches of size 64,
-with gradient clipping at 10 and step rule determined by Adam~\citep{kingma2014adam}
-with learning rate $8 \times 10^{-5}$.
-These hyperparameters were chosen because they work well for the baseline.
+We evaluate several variants.
+The first variant, referred to as BN-LSTM, consists of the vanilla Attentive Reader model with the LSTM simply replaced by our BN-LSTM reparameterization.
+The second variant, termed BN-everywhere, is exactly like the first, except that we also introduce batch normalization into the attention computations, normalizing each term going into the $\tanh$ nonlinearities.
 
-We evaluate the models on the question answering task using the CNN corpus, with placeholders for the named entities. We follow a similar preprocessing pipeline as~\citet{attentivereader}.
+Our third variant, BN-e*, is like BN-everywhere, but improved to more carefully handle variable-length sequences.
+Throughout this experiment we followed the common practice of padding each batch of variable-length data with zeros.
+However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
+We address this effect using \emph{sequencewise} normalization of the inputs as proposed by~\citep{cesar,baidu}.
+That is, we share statistics over time for normalization of the input terms $\mat{W}_x \vect{x}_t$,
+but \emph{not} for the recurrent terms $\mat{W}_h \vect{h}_t$ or the cell output $\vect{c}_t$.
+Doing so avoids many issues involving degenerate statistics due to input sequence padding.
+
+Our fourth and final variant BN-e** is like the third variant but bidirectional.
+The main difficulty in adapting to bidirectional models also involves padding.
+Padding poses no problem as long as it is properly ignored (by not updating the hidden states based on padded regions of the input).
+However to perform the reverse application of a bidirectional model, it is common to simply reverse the padded sequences, thus moving the padding to the front.
+This causes similar problems as were observed on the sequential MNIST task (Section~\ref{sec:seqmnist}): the hidden states will not diverge during the initial timesteps and hence their variance will be severely underestimated.
+To get around this, we reverse only the unpadded portion of the input sequences and leave the padding in place.
+
+We evaluate these models on the question answering task using the CNN corpus, with placeholders for the named entities. We follow a similar preprocessing pipeline as~\citet{attentivereader}.
 During training, we randomly sample the examples with replacement and shuffle the order of the placeholders in each text inside the minibatch.
 We use a vocabulary of 65829 words.
 
@@ -531,18 +548,42 @@ Both the training and validation sets are preprocessed in this way.
 Due to imprecision this heuristic sometimes strips the answers from the passage,
 putting an upper bound of 57\% on the validation accuracy that can be achieved.
 
-Figure~\ref{fig:attr_valid} shows the learning curves for the different variants of the attentive reader.
+The first three models (LSTM, BN-LSTM and BN-everywhere) are trained using the exact same hyperparameters, which were chosen because they work well for the baseline.
+The hidden state is composed of 240 units.
+We use stochastic gradient descent on minibatches of size 64,
+with gradient clipping at 10 and step rule determined by Adam~\citep{kingma2014adam}
+with learning rate $8 \times 10^{-5}$.
+
+For BN-e* and BN-e**, we use the same hyperparameters except that we reduce the learning rate of $8 \times 10^{-4}$ and the minibatch size to 40.
+
+Figure~\ref{fig:attr_valid2} shows the learning curves for the different variants of the attentive reader.
 BN-LSTM trains dramatically faster than the LSTM baseline.
 BN-everywhere in turn shows a significant improvement over BN-LSTM.
 In addition, both BN-LSTM and BN-everywhere show a generalization benefit over the baseline.
 The validation curves have minima of 50.3\%, 49.5\% and 50.0\% for the baseline, BN-LSTM and BN-everywhere respectively.
 We emphasize that these results were obtained without any tweaking -- all we did was to introduce batch normalization.
 
-For this experiment we followed the common practice of padding each batch of variable-length examples with zeros.
-However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
-Although we obtain good results despite this effect, we suggest to address it, either by padding the data with repetitions or by sharing the statistics of $\vect{x}_t$ over time as proposed by~\citet{cesar}.
+BN-e* and BN-e** converge faster yet, and reach lower minima: 47.1\% and 43.9\% respectively.
 
-More experiments on this task can be found in Appendix~\ref{sec:more-attr}.
+\begin{table}%[!hb]
+  \center
+  \begin{tabular}{@{}lrr@{}}
+  \toprule
+  \bf Model & \bf CNN valid & \bf CNN test \\
+  \midrule
+  Attentive Reader~\citep{attentivereader} & 38.4 & 37.0 \\
+  \midrule
+  LSTM (ours) & 45.5 & 45.0 \\
+  BN-e** (ours) & \textbf{37.9} & \textbf{36.3} \\
+  \bottomrule
+\end{tabular}
+\caption{Error rates on the CNN question-answering task~\citet{attentivereader}.}
+\label{tab:attr_full}
+\end{table}
+
+We train and evaluate our best model, BN-e**, on the full task from~\citep{attentivereader}.
+Training curves for BN-e** and a vanilla LSTM are shown in Figure~\ref{fig:attr_full_valid}.
+Table~\ref{tab:attr_full} reports performances of the early-stopped models.
 
 \section{Conclusion}
 
@@ -552,6 +593,7 @@ Indeed, doing so yields benefits similar to those of batch normalization in feed
 our proposed BN-LSTM trains faster and generalizes better on a variety of tasks including language modeling and question-answering.
 We have argued that proper initialization of the batch normalization parameters is crucial,
 and suggest that previous difficulties~\citep{cesar, baidu} were due in large part to improper initialization.
+Finally, we have shown our model to apply to complex settings involving variable-length data, bidirectionality and highly nonlinear attention mechanisms.
 
 %\section*{Acknowledgements}
 
@@ -569,6 +611,13 @@ and suggest that previous difficulties~\citep{cesar, baidu} were due in large pa
 
 \section{Sensitivity to initialization of $\gamma$}
 
+\begin{figure}%[!ht]
+\center
+\includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
+\caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
+\label{fig:gammas}
+\end{figure}
+
 In Section~\ref{sec:activation-variance} we investigated the effect of initial $\gamma$ on gradient flow.
 To show the practical implications of this, we performed several experiments on the $p$MNIST and Penn Treebank benchmarks.
 The resulting performances are shown in Figure~\ref{fig:gammas}.
@@ -584,68 +633,5 @@ In the Penn Treebank task on the other hand, the model makes a prediction at eac
 At each step of the backward pass, a fresh learning signal is added to the backpropagated gradient.
 Essentially, the model is able to get off the ground by picking up short-term dependencies.
 This fails on $p$MNIST wich is dominated by long-term dependencies.~\cite{urnn}
-
-\begin{figure}%[!ht]
-\center
-\includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
-\caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
-\label{fig:gammas}
-\end{figure}
-
-\section{Additional Attentive Reader results}
-\label{sec:more-attr}
-
-Since publishing the preliminary results in Section~\ref{sec:less-attr},
-we have performed more thorough experiments on the Attentive Reader model.
-
-In doing so, we have extended our proposal to encompass bidirectional recurrent neural networks.
-The main difficulty in adapting to bidirectional models has to do with padding.
-Traditionally, variable-length sequences are zero-padded at the end to have a common length.
-This case poses no problem as long as the padding is properly ignored (by not updating the hidden states based on padded regions of the input).
-However to perform the reverse application of a bidirectional model, it is common to simply reverse the padded sequences, thus moving the padding to the front.
-This causes similar problems as were observed on the sequential MNIST task (Section~\ref{sec:seqmnist}): the hidden states will not diverge during the initial timesteps and hence their variance will be severely underestimated.
-To get around this, we reverse only the unpadded portion of the input sequences and leave the padding in place.
-
-We have found that performance is best when we rely on \emph{sequencewise} normalization of the inputs as proposed by~\citep{cesar,baidu}.
-That is, we share statistics over time for normalization of the input terms $\mat{W}_x \vect{x}_t$,
-but \emph{not} for the recurrent terms $\mat{W}_h \vect{h}_t$ or the cell output $\vect{c}_t$.
-Doing so avoids many issues involving degenerate statistics due to input sequence padding.
-
-After incorporating these improvements, our new results on the reduced task described in~\ref{sec:less-attr} are shown in Figure~\ref{fig:attr_valid2}.
-
-\begin{figure}[!ht]
-  \center%
-  \subfigure[
-partial CNN dataset
-As detailed in the text, the theoretical lower bound on the error rate on this task is 43\%.
-]{%
-    \label{fig:attr_valid2}
-    \includegraphics[width=.45\textwidth]{figures/attr_valid2.pdf}
-  }%
-  \hspace{2mm}%
-  \subfigure[
-full CNN dataset.
-]{%
-    \label{fig:attr_full_valid}
-    \includegraphics[width=.45\textwidth]{figures/attr_full_valid.pdf}
-  }
-  \caption{Training curves on the CNN question-answering tasks.}
-  \label{fig:attr2}
-\end{figure}
-
-(lr 8e-4 batch size 40)
-accuracies valid
-previously: 50.0
-unidir: 47.1
-bidir: 43.9
-
-On the full task from~\citet{attentivereader}, our results are
-
-accuracies valid/test
-baseline: 54.5/55.0
-bn-bidir-120-units: 62.1/63.7 (120 units, lr8e-4 batch size 40)
-deepmind: 61.6/63.0
-
-shown in Figure~\ref{fig:attr_full_valid}.
 
 \end{document}
