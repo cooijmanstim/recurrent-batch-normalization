@@ -98,9 +98,9 @@ of the batch normalization parameters is crucial to avoiding vanishing gradient 
 We evaluate our proposal on several sequential problems and show (Section~\ref{sec:experiments}) that our
 LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
 in terms of both time to convergence and performance.
-In particular, we achieve state-of-the-art performance on
-Sequential MNIST~\citep{le2015simple} and
-character-level language modeling on the text8~\citep{mahoney2009large} corpus.
+%% In particular, we achieve state-of-the-art performance on
+%% Sequential MNIST~\citep{le2015simple} and
+%% character-level language modeling on the text8~\citep{mahoney2009large} corpus.
 
 \citep{ba2016layer} independently developed a variant of batch normalization that is
 also applicable to recurrent neural networks and delivers similar improvements as our method.
@@ -401,7 +401,6 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \end{figure}
 
 \subsection{Character-level Penn Treebank}
-
 \begin{table}%[!hb]
   \center
 \begin{tabular}{@{}lc@{}}
@@ -417,7 +416,7 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
   LSTM (ours) & 1.38 \\
   BN-LSTM (ours) & 1.32 \\
   \midrule
-  Zoneout~\citep{krueger2016zoneout} & 1.28 \\
+  Zoneout~\citep{krueger2016zoneout} & 1.27 \\
   HM-LSTM~\citep{chung2016hierarchical} & 1.24 \\
   HyperNetworks~\citep{ha2016hypernetworks} & \textbf{1.22} \\
   \bottomrule
@@ -425,7 +424,6 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \caption{Bits-per-character on the Penn Treebank test sequence.}
 \label{tab:ptb_test}
 \end{table}
-
 \begin{table}%[!hb]
   \center
   \begin{tabular}{@{}lc@{}}
@@ -445,8 +443,6 @@ In addition, Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM 
 \caption{Bits-per-character on the text8 test sequence.}
 \label{tab:text8_test}
 \end{table}
-
-
 We evaluate our model on the task of character-level language modeling on the Penn Treebank corpus~\citep{penntreebank}
 according to the train/valid/test partition of~\citet{mikolov2012subword}.
 For training, we segment the training sequence into examples of length 100.
@@ -466,8 +462,8 @@ We observe that using the population statistics improves generalization performa
 which confirms that repeating the last population statistic (cf. Section~\ref{sec:recurrent-batch-normalization})
 is a viable strategy.
 In table~\ref{tab:ptb_test} we report the performance of our best models (early-stopped on validation performance)
-on the Penn Treebank test sequence and compare them to previous work.
-Our BN-LSTM model compares favorably to state-of-the-art models.
+on the Penn Treebank test sequence. % and compare them to previous work.
+Following works has since improved upon our performances~\citep{krueger2016zoneout,chung2016hierarchical,ha2016hypernetworks}.
 
 \subsection{Text8}
 
@@ -612,13 +608,6 @@ Finally, we have shown our model to apply to complex settings involving variable
 
 \section{Sensitivity to initialization of $\gamma$}
 
-\begin{figure}%[!ht]
-\center
-\includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
-\caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
-\label{fig:gammas}
-\end{figure}
-
 In Section~\ref{sec:activation-variance} we investigated the effect of initial $\gamma$ on gradient flow.
 To show the practical implications of this, we performed several experiments on the $p$MNIST and Penn Treebank benchmarks.
 The resulting performances are shown in Figure~\ref{fig:gammas}.
@@ -634,5 +623,13 @@ In the Penn Treebank task on the other hand, the model makes a prediction at eac
 At each step of the backward pass, a fresh learning signal is added to the backpropagated gradient.
 Essentially, the model is able to get off the ground by picking up short-term dependencies.
 This fails on $p$MNIST wich is dominated by long-term dependencies.~\cite{urnn}
+
+\begin{figure}%[!ht]
+\center
+\includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
+\caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
+\label{fig:gammas}
+\end{figure}
+
 
 \end{document}
