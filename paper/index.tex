@@ -66,38 +66,43 @@ machine translation~\citep{bahdanau2014neural} and image and video captioning~\c
 Top-performing models, however, are based on very high-capacity networks that are computationally intensive and costly to train.
 Effective optimization of recurrent neural networks is thus an active area of study~\citep{pascanudifficulty,hessianfree,ollivier}.
 
-It is known that for deep feed-forward neural networks, covariate shift~\citep{shimodaira2000improving,batchnorm}
-degrades the efficiency of training.
-Covariate shift is a change in the distribution of the inputs to a model.
-This occurs continuously during training of feed-forward neural networks,
-where changing the parameters of a layer affects the distribution of the inputs to all layers above it.
-As a result, the upper layers are continually adapting to the shifting input distribution and unable to learn effectively.
-This \emph{internal} covariate shift~\citep{batchnorm} may play an especially important role in recurrent neural networks,
-which resemble very deep feed-forward networks.
+It is well-known that for deep feed-forward neural networks, covariate
+shift~\citep{shimodaira2000improving,batchnorm} degrades the efficiency of training.  Covariate
+shift is a change in the distribution of the inputs to a model.  This occurs continuously during
+training of feed-forward neural networks, where changing the parameters of a layer affects the
+distribution of the inputs to all layers above it.  As a result, the upper layers are continually
+adapting to the shifting input distribution and unable to learn effectively.  This \emph{internal}
+covariate shift~\citep{batchnorm} may play an especially important role in recurrent neural
+networks, which resemble very deep feed-forward networks.
 
-Batch normalization~\citep{batchnorm} is a recently proposed technique for controlling the distributions of feed-forward neural network activations, thereby reducing internal covariate shift.
-It involves standardizing the activations going into each layer, enforcing their means and variances to be invariant to changes in the parameters of the underlying layers.
+Batch normalization~\citep{batchnorm} is a recently proposed technique for controlling the
+distributions of feed-forward neural network activations, thereby reducing internal covariate
+shift.  It involves standardizing the activations going into each layer, enforcing their means and
+variances to be invariant to changes in the parameters of the underlying layers.
 % relying on the observation that a network converges faster when its inputs have zero mean, unit variance and are uncorrelated~\cite{efficientbackprop}.
-This effectively decouples each layer's parameters from those of other layers, leading to a better-conditioned optimization problem.
-Indeed, deep neural networks trained with batch normalization converge significantly faster and generalize better.
+This effectively decouples each layer's parameters from those of other layers, leading to a
+better-conditioned optimization problem.  Indeed, deep neural networks trained with batch
+normalization converge significantly faster and generalize better.
 
-Although batch normalization has demonstrated significant training speed-ups and generalization benefits in feed-forward networks,
-it has proven to be difficult to apply in recurrent architectures~\citep{cesar,baidu}.
-It has found limited use in stacked RNNs, where the normalization is applied ``vertically'',
-i.e. to the input of each RNN, but not ``horizontally'' between timesteps.
-RNNs are deeper in the time direction, and as such batch normalization would be most beneficial when applied horizontally.
-However,~\citet{cesar} hypothesized that applying batch normalization in this way hurts training
-because of exploding gradients due to repeated rescaling.
+Although batch normalization has demonstrated significant training speed-ups and generalization
+benefits in feed-forward networks, it is proven to be difficult to apply in recurrent
+architectures~\citep{cesar,baidu}.  It has found limited use in stacked RNNs, where the
+normalization is applied ``vertically'', i.e. to the input of each RNN, but not ``horizontally''
+between timesteps.  RNNs are deeper in the time direction, and as such batch normalization would
+be most beneficial when applied horizontally.  However,~\citet{cesar} hypothesized that applying
+batch normalization in this way hurts training because of exploding gradients due to repeated
+rescaling.
 
-However, our findings run counter to this hypothesis.
-We show that it is both possible and highly beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
-In particular, we describe a reparameterization of LSTM (Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization
-and demonstrate that it is easier to optimize and generalizes better.
-In addition, we empirically analyze the gradient backpropagation and show that proper initialization
-of the batch normalization parameters is crucial to avoiding vanishing gradient (Section~\ref{sec:activation-variance}).
-We evaluate our proposal on several sequential problems and show (Section~\ref{sec:experiments}) that our
-LSTM reparameterization consistently outperforms the LSTM baseline across tasks,
-in terms of both time to convergence and performance.
+However, our findings run counter to this hypothesis.  We show that it is both possible and highly
+beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
+In particular, we describe a reparameterization of LSTM
+(Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization and
+demonstrate that it is easier to optimize and generalizes better.  In addition, we empirically
+analyze the gradient backpropagation and show that proper initialization of the batch
+normalization parameters is crucial to avoiding vanishing gradient
+(Section~\ref{sec:activation-variance}).  We evaluate our proposal on several sequential problems
+and show (Section~\ref{sec:experiments}) that our LSTM reparameterization consistently outperforms
+the LSTM baseline across tasks, in terms of both time to convergence and performance.
 %% In particular, we achieve state-of-the-art performance on
 %% Sequential MNIST~\citep{le2015simple} and
 %% character-level language modeling on the text8~\citep{mahoney2009large} corpus.
