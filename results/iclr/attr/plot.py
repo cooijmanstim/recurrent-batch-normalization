@@ -7,13 +7,13 @@ paths = """
 LSTM:preliminary/baseline/stats_dimworda_[240]_datamode_top4_usedqsim_1_useelug_0_validFre_1000_clip-c_[10.0]_usebidir_0_encoderq_lstm_dimproj_[240]_use-drop_[True]_optimize_adam_decay-c_[0.0]_truncate_-1_learnh0_1_default.npz.pkl
 BN-LSTM:preliminary/batchnorm/stats_dimworda_[240]_datamode_top4_usedqsim_1_useelug_0_validFre_1000_clip-c_[10.0]_usebidir_0_encoderq_bnlstm_dimproj_[240]_use-drop_[True]_optimize_adam_decay-c_[0.0]_truncate_-1_default.npz.pkl
 BN-everywhere:preliminary/batchnorm-everywhere/stats_dimworda_[240]_datamode_top4_usedqsim_1_useelug_0_validFre_1000_clip-c_[10.0]_usebidir_0_encoderq_bnlstm_dimproj_[240]_use-drop_[True]_optimize_adam_decay-c_[0.0]_default.npz.pkl
+Unidir:reprod/improved_240_uni_bs40_lr8e-4_use_dq_sims1_use_desc_skip_c_g1_sequensewisenorm/stats_bn-bidir-dropout.npz.pkl
+Bidir:reprod/bidir/240_bi_bs64_lr8e-5_use_dq_sims1_use_desc_skip_c_g1_sequensewisenorm/stats_bn-bidir-dropout.npz.pkl
 """.split()
-#Unidir:reprod/improved_240_uni_bs40_lr8e-4_use_dq_sims1_use_desc_skip_c_g1_sequensewisenorm/stats_bn-bidir-dropout.npz.pkl
-#Bidir:reprod/bidir/240_bi_bs64_lr8e-5_use_dq_sims1_use_desc_skip_c_g1_sequensewisenorm/stats_bn-bidir-dropout.npz.pkl
 
 friendly_labels = {
-  "Unidir": "BN-e unidir tweaked",
-  "Bidir": "BN-e bidir tweaked",
+  "Unidir": "BN-e*",
+  "Bidir": "BN-e**",
 }
 
 instances = []
@@ -68,5 +68,5 @@ if False:
 plt.tight_layout()
 fig = plt.gcf()
 fig.set_size_inches(800 / fig.dpi, 600 / fig.dpi)
-plt.savefig("attr_valid.pdf", bbox_inches="tight")
+plt.savefig("attr_valid2.pdf", bbox_inches="tight")
 #plt.show()

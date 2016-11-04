@@ -10,7 +10,7 @@ friendly_labels = {
 
 paths = """
 LSTM:full/baseline.npz.pkl
-Bidir:full/120_uni_bs64_lr8e-4_use_dq_sims1_use_desc_skip_c_g1_sequencewise/stats_bn-bidir-dropout.npz.pkl
+BN-e**:full/120_uni_bs64_lr8e-4_use_dq_sims1_use_desc_skip_c_g1_sequencewise/stats_bn-bidir-dropout.npz.pkl
 """.split()
 
 #Unidir:full/bn_280_bi_bs64_lr8e-4_use_dq_sims1_use_desc_skip_c_g1_sequensewisenorm/stats_bn-bidir-dropout.npz.pkl
