@@ -93,7 +93,7 @@ be most beneficial when applied horizontally.  However,~\citet{cesar} hypothesiz
 batch normalization in this way hurts training because of exploding gradients due to repeated
 rescaling.
 
-However, our findings run counter to this hypothesis.  We show that it is both possible and highly
+Our findings run counter to this hypothesis.  We show that it is both possible and highly
 beneficial to apply batch normalization in the hidden-to-hidden transition of recurrent models.
 In particular, we describe a reparameterization of LSTM
 (Section~\ref{sec:recurrent-batch-normalization}) that involves batch normalization and
@@ -107,7 +107,7 @@ the LSTM baseline across tasks, in terms of both time to convergence and perform
 %% Sequential MNIST~\citep{le2015simple} and
 %% character-level language modeling on the text8~\citep{mahoney2009large} corpus.
 
-\citep{ba2016layer} independently developed a variant of batch normalization that is
+\citet{ba2016layer} independently developed a variant of batch normalization that is
 also applicable to recurrent neural networks and delivers similar improvements as 
 our method.
 
@@ -135,6 +135,7 @@ Gradient vanishing occurs when states $\vect{h}_t$ are not influenced by small c
 preventing learning of long-term dependencies in the input data.
 Although learning long-term dependencies is fundamentally difficult~\citep{bengio1994learning},
 its effects can be mitigated through architectural variations such as LSTM~\citep{lstm}, GRU~\citep{cho2014learning} and $i$RNN/$u$RNN~\citep{le2015simple,urnn}.
+
 In what follows, we focus on the LSTM architecture~\citep{lstm} with recurrent transition given by
 \begin{eqnarray}
 \left(\begin{array}{ccc}
@@ -204,16 +205,6 @@ statistics, preserving the convergence properties of stochastic gradient
 descent.  During inference, the statistics are typically estimated based on the
 entire training set, so as to produce a deterministic prediction.
 
-\begin{figure}[!ht]
-\center
-\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
-\caption{Convergence of population statistics to stationary distributions on the 
-Penn Treebank task. Each curve corresponds to a single hidden unit. Only a random subset of units is shown.}
-\label{fig:popstat_stationarity}
-\end{figure}
-
-
-
 \section{Batch-Normalized LSTM}
 \label{sec:recurrent-batch-normalization}
 
@@ -257,7 +248,7 @@ for normalization across time, just as recurrent neural networks share their
 parameters over time.  However, we find that simply averaging statistics over
 time severely degrades performance.  Although LSTM activations do converge to a
 stationary distribution, we observe that their statistics during the initial
-transient differ significantly (Figure~\ref{fig:popstat_stationarity}).
+transient differ significantly (see Figure~\ref{fig:popstat_stationarity} in Appendix~\ref{sec:popstat_stationarity}).
 Consequently, we recommend using separate statistics for each timestep to
 preserve information of the initial transient phase in the
 activations.\footnote{ Note that we separate \emph{only} the statistics over
@@ -427,27 +418,6 @@ models have to leverage long-term temporal depencies.  In addition,
 Table~\ref{tab:seqmnist_test} shows that our batch-normalized LSTM achieves
 state of the art on both MNIST and $p$MNIST.
 
-\begin{figure}[!ht]
-  \center%
-  \subfigure[
-    Performance in bits-per-character on length-100 subsequences of the Penn Treebank
-    validation sequence during training.
-]{%
-    \label{fig:ptb_valid}
-    \includegraphics[width=.45\textwidth]{figures/ptb_valid.pdf}
-  }%
-  \hspace{2mm}%
-  \subfigure[
-    Generalization to longer subsequences of Penn Treebank using population statistics.
-    The subsequences are taken from the test sequence.
-]{%
-    \label{fig:ptb_lengths}
-    \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
-  }
-  \caption{Penn Treebank evaluation}
-  \label{fig:ptb}
-\end{figure}
-
 \subsection{Character-level Penn Treebank}
 \begin{table}%[!hb]
   \center
@@ -455,7 +425,7 @@ state of the art on both MNIST and $p$MNIST.
   \toprule
   \bf Model & \bf Penn Treebank \\
   \midrule
-  LSTM~\citep{graves2013generating} &  1.26\footnote{Our performance does not directly compare against~\citep{graves2013generating} as they use a different dataset split.}\\
+  LSTM~\citep{graves2013generating} &  1.26\footnote{Our performance does not directly compare against~\citet{graves2013generating} as they use a different dataset split.}\\
   \midrule
   HF-MRNN~\citep{mikolov2012subword} & 1.41 \\
   Norm-stabilized LSTM~\citep{krueger} & 1.39 \\
@@ -472,25 +442,7 @@ state of the art on both MNIST and $p$MNIST.
 \caption{Bits-per-character on the Penn Treebank test sequence.}
 \label{tab:ptb_test}
 \end{table}
-\begin{table}%[!hb]
-  \center
-  \begin{tabular}{@{}lc@{}}
-  \toprule
-  \bf Model & \bf text8 \\
-  \midrule
-  $td$-LSTM~\citep{zhang2016architectural} & 1.63 \\
-  HF-MRNN~\citep{mikolov2012subword} & 1.54 \\
-  skipping RNN~\citep{pachitariu2013regularization} & 1.48 \\
-  \midrule
-  LSTM (ours) &  1.43 \\
-  BN-LSTM (ours) & 1.36 \\
-  \midrule
-  HM-LSTM~\citep{chung2016hierarchical} & \textbf{1.29} \\
-  \bottomrule
-\end{tabular}
-\caption{Bits-per-character on the text8 test sequence.}
-\label{tab:text8_test}
-\end{table}
+
 We evaluate our model on the task of character-level language modeling on the
 Penn Treebank corpus~\citep{penntreebank} according to the train/valid/test
 partition of~\citet{mikolov2012subword}.  For training, we segment the training
@@ -517,6 +469,27 @@ models (early-stopped on validation performance) on the Penn Treebank test
 sequence.  Follow up works havd since improved the state of the
 art~\citep{krueger2016zoneout,chung2016hierarchical,ha2016hypernetworks}.
 
+\begin{figure}[!hb]
+  \center%
+  \subfigure[
+    Performance in bits-per-character on length-100 subsequences of the Penn Treebank
+    validation sequence during training.
+]{%
+    \label{fig:ptb_valid}
+    \includegraphics[width=.45\textwidth]{figures/ptb_valid.pdf}
+  }%
+  \hspace{2mm}%
+  \subfigure[
+    Generalization to longer subsequences of Penn Treebank using population statistics.
+    The subsequences are taken from the test sequence.
+]{%
+    \label{fig:ptb_lengths}
+    \includegraphics[width=.45\textwidth]{figures/ptb_lengths.pdf}
+  }
+  \caption{Penn Treebank evaluation}
+  \label{fig:ptb}
+\end{figure}
+
 \subsection{Text8}
 
 We evaluate our model on a second character-level language modeling task on the
@@ -537,12 +510,32 @@ initialized to be orthogonal.
 We early-stop on validation performance and report the test performance of the
 resulting model in table~\ref{tab:text8_test}.  We observe that BN-LSTM obtains
 a significant performance improvement over the LSTM baseline.
-\citep{chung2016hierarchical} has since improved on our performance.
+\citet{chung2016hierarchical} has since improved on our performance.
+
+\begin{table}[!hb]
+  \center
+  \begin{tabular}{@{}lc@{}}
+  \toprule
+  \bf Model & \bf text8 \\
+  \midrule
+  $td$-LSTM~\citep{zhang2016architectural} & 1.63 \\
+  HF-MRNN~\citep{mikolov2012subword} & 1.54 \\
+  skipping RNN~\citep{pachitariu2013regularization} & 1.48 \\
+  \midrule
+  LSTM (ours) &  1.43 \\
+  BN-LSTM (ours) & 1.36 \\
+  \midrule
+  HM-LSTM~\citep{chung2016hierarchical} & \textbf{1.29} \\
+  \bottomrule
+\end{tabular}
+\caption{Bits-per-character on the text8 test sequence.}
+\label{tab:text8_test}
+\end{table}
 
 \subsection{Teaching Machines to Read and Comprehend}
 \label{sec:less-attr}
 
-Recently,~\citep{attentivereader} introduced a set of challenging benchmarks
+Recently,~\citet{attentivereader} introduced a set of challenging benchmarks
 for natural language processing, along with neural network architectures to
 address them.  The tasks involve reading real news articles and answering
 questions about their content.  Their principal model, the Attentive Reader, is
@@ -551,15 +544,15 @@ relevant information in the document.  Such models are notoriously hard to
 optimize and yet increasingly popular.
 % maybe cite NTM, memory networks and such on that
 
-We use batch normalization to drastically improve training of the Attentive
-Reader Model. This also demonstrates the generality and practical applicability
-of our proposal .
+To demonstrate the generality and practical applicability of our proposal,
+we apply batch normalization in the Attentive Reader model
+and show that this drastically improves training.
 
 \begin{figure}[!ht]
   \center%
   \subfigure[
 Error rate on the validation set for the Attentive Reader models on a variant
-of the CNN QA task~\citep{attentivereader}.  As detailed in the text, the
+of the CNN QA task~\citep{attentivereader}.  As detailed in Appendix~\ref{sec:more-attr}, the
 theoretical lower bound on the error rate on this task is 43\%.
 ]{%
     \label{fig:attr_valid2}
@@ -588,7 +581,7 @@ handle variable-length sequences.  Throughout this experiment we followed the
 common practice of padding each batch of variable-length data with zeros.
 However, this biases the batch mean and variance of $\vect{x}_t$ toward zero.
 We address this effect using \emph{sequencewise} normalization of the inputs as
-proposed by~\citep{cesar,baidu}.  That is, we share statistics over time for
+proposed by~\citet{cesar,baidu}.  That is, we share statistics over time for
 normalization of the input terms $\mat{W}_x \vect{x}_t$, but \emph{not} for the
 recurrent terms $\mat{W}_h \vect{h}_t$ or the cell output $\vect{c}_t$.  Doing
 so avoids many issues involving degenerate statistics due to input sequence
@@ -605,28 +598,7 @@ hidden states will not diverge during the initial timesteps and hence their
 variance will be severely underestimated.  To get around this, we reverse only
 the unpadded portion of the input sequences and leave the padding in place.
 
-We evaluate these models on the question answering task using the CNN corpus,
-with placeholders for the named entities. We follow a similar preprocessing
-pipeline as~\citet{attentivereader}.  During training, we randomly sample the
-examples with replacement and shuffle the order of the placeholders in each
-text inside the minibatch.  We use a vocabulary of 65829 words.
-
-We deviate from~\citet{attentivereader} in order to save computation:
-we use only the 4 most relevant sentences from the description,
-as identified by a string matching procedure.
-Both the training and validation sets are preprocessed in this way.
-Due to imprecision this heuristic sometimes strips the answers from the passage,
-putting an upper bound of 57\% on the validation accuracy that can be achieved.
-
-The first three models (LSTM, BN-LSTM and BN-everywhere) are trained using the
-exact same hyperparameters, which were chosen because they work well for the
-baseline.  The hidden state is composed of 240 units.  We use stochastic
-gradient descent on minibatches of size 64, with gradient clipping at 10 and
-step rule determined by Adam~\citep{kingma2014adam} with learning rate $8
-\times 10^{-5}$.
-
-For BN-e* and BN-e**, we use the same hyperparameters except that we reduce the
-learning rate of $8 \times 10^{-4}$ and the minibatch size to 40.
+See Appendix~\ref{sec:more-attr} for hyperparameters and task details.
 
 Figure~\ref{fig:attr_valid2} shows the learning curves for the different
 variants of the attentive reader.  BN-LSTM trains dramatically faster than the
@@ -640,7 +612,7 @@ was to introduce batch normalization.
 BN-e* and BN-e** converge faster yet, and reach lower minima: 47.1\% and 43.9\%
 respectively.
 
-\begin{table}%[!hb]
+\begin{table}[!hb]
   \center
   \begin{tabular}{@{}lrr@{}}
   \toprule
@@ -675,19 +647,32 @@ initialization.  Finally, we have shown our model to apply to complex settings
 involving variable-length data, bidirectionality and highly nonlinear attention
 mechanisms.
 
-%\section*{Acknowledgements}
+\section*{Acknowledgements}
 
-%The authors would like to acknowledge the support of the following agencies for
-%research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
-%the Canada Research Chairs and CIFAR.
-%We thank the developers of Theano~\citep{theano} and the
-%Blocks and Fuel~\citep{blocks} libraries for developing such powerful tools for scientific computing.
-%We further thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
+The authors would like to acknowledge the following agencies for
+research funding and computing support: the Nuance Foundation, Samsung, NSERC, Calcul Qu\'{e}bec, Compute Canada,
+the Canada Research Chairs and CIFAR.
+Experiments were carried out using the Theano~\citep{theano} and the
+Blocks and Fuel~\citep{blocks} libraries for scientific computing.
+We thank David Krueger, Saizheng Zhang, Ishmael Belghazi and Yoshua Bengio for discussions and suggestions.
 
 \bibliography{index}
 \bibliographystyle{iclr2017_conference}
 
+\newpage
+
 \appendix
+
+\section{Convergence of population statistics} \label{sec:popstat_stationarity}
+
+\begin{figure}[!h]
+\center
+\includegraphics[width=0.8\textwidth]{figures/popstat_stationarity.pdf}
+\caption{Convergence of population statistics to stationary distributions on the 
+Penn Treebank task. The horizontal axis denotes RNN time. Each curve corresponds to a single hidden unit. Only a random subset of units is shown.
+See Section~\ref{sec:recurrent-batch-normalization} for discussion.}
+\label{fig:popstat_stationarity}
+\end{figure}
 
 \section{Sensitivity to initialization of $\gamma$}
 
@@ -705,14 +690,38 @@ Learning from this feedback requires propagating the gradient all the way back t
 In the Penn Treebank task on the other hand, the model makes a prediction at each timestep.
 At each step of the backward pass, a fresh learning signal is added to the backpropagated gradient.
 Essentially, the model is able to get off the ground by picking up short-term dependencies.
-This fails on $p$MNIST wich is dominated by long-term dependencies.~\cite{urnn}
+This fails on $p$MNIST wich is dominated by long-term dependencies~\citep{urnn}.
 
-\begin{figure}%[!ht]
+\begin{figure}[!ht]
 \center
 \includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
 \caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
 \label{fig:gammas}
 \end{figure}
 
+\section{Teaching Machines to Read and Comprehend: Task setup and hyperparameters} \label{sec:more-attr}
+
+We evaluate the models on the question answering task using the CNN corpus~\citep{attentivereader},
+with placeholders for the named entities. We follow a similar preprocessing
+pipeline as~\citet{attentivereader}.  During training, we randomly sample the
+examples with replacement and shuffle the order of the placeholders in each
+text inside the minibatch.  We use a vocabulary of 65829 words.
+
+We deviate from~\citet{attentivereader} in order to save computation:
+we use only the 4 most relevant sentences from the description,
+as identified by a string matching procedure.
+Both the training and validation sets are preprocessed in this way.
+Due to imprecision this heuristic sometimes strips the answers from the passage,
+putting an upper bound of 57\% on the validation accuracy that can be achieved.
+
+The first three models (LSTM, BN-LSTM and BN-everywhere) are trained using the
+exact same hyperparameters, which were chosen because they work well for the
+baseline.  The hidden state is composed of 240 units.  We use stochastic
+gradient descent on minibatches of size 64, with gradient clipping at 10 and
+step rule determined by Adam~\citep{kingma2014adam} with learning rate $8
+\times 10^{-5}$.
+
+For BN-e* and BN-e**, we use the same hyperparameters except that we reduce the
+learning rate to $8 \times 10^{-4}$ and the minibatch size to 40.
 
 \end{document}
