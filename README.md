@@ -12,3 +12,4 @@ Depends on [Theano](https://github.com/Theano/Theano), [Blocks](https://github.c
 Other implementations:
 - https://github.com/fchollet/keras/pull/2183
 - https://github.com/iassael/torch-bnlstm
+- https://github.com/OlavHN/bnlstm
