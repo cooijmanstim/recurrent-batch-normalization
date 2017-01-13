@@ -692,14 +692,14 @@ At each step of the backward pass, a fresh learning signal is added to the backp
 Essentially, the model is able to get off the ground by picking up short-term dependencies.
 This fails on $p$MNIST wich is dominated by long-term dependencies~\citep{urnn}.
 
-\begin{figure}[!ht]
+\begin{figure}[!h]
 \center
 \includegraphics[width=0.9\textwidth]{figures/gammas.pdf}
 \caption{Training curves on $p$MNIST and Penn Treebank for various initializations of $\gamma$.}
 \label{fig:gammas}
 \end{figure}
 
-\section{Teaching Machines to Read and Comprehend: Task setup and hyperparameters} \label{sec:more-attr}
+\section{Teaching Machines to Read and Comprehend: Task setup} \label{sec:more-attr}
 
 We evaluate the models on the question answering task using the CNN corpus~\citep{attentivereader},
 with placeholders for the named entities. We follow a similar preprocessing
@@ -714,7 +714,7 @@ Both the training and validation sets are preprocessed in this way.
 Due to imprecision this heuristic sometimes strips the answers from the passage,
 putting an upper bound of 57\% on the validation accuracy that can be achieved.
 
-The first three models (LSTM, BN-LSTM and BN-everywhere) are trained using the
+For the reporterd performances, the first three models (LSTM, BN-LSTM and BN-everywhere) are trained using the
 exact same hyperparameters, which were chosen because they work well for the
 baseline.  The hidden state is composed of 240 units.  We use stochastic
 gradient descent on minibatches of size 64, with gradient clipping at 10 and
@@ -723,5 +723,50 @@ step rule determined by Adam~\citep{kingma2014adam} with learning rate $8
 
 For BN-e* and BN-e**, we use the same hyperparameters except that we reduce the
 learning rate to $8 \times 10^{-4}$ and the minibatch size to 40.
+
+
+\section{Hyperparameters Exploration}
+
+Table~\ref{tab:hyperparams} reports the main  hyperparameter values that were explored in the experiments. We performed a grid search using those values for both baseline LSTM and BN-LSTM (expect for $\gamma$ which is an hyperparameter introduced by BN-LSTM). We report the results of the best performing model on the validation set, in each case.
+
+\begin{table}[!hb]
+
+  \subtable[MNIST and pMNIST]
+  {
+    \begin{tabular}{cc}
+      Learning Rate: & 1e-2, 1e-3, 1e-4\\
+      RMProp Momentum: & 0.5,  0.9\\
+      Hidden States Size: & 100 200 400\\
+      $\gamma$: & 1e-1, 3e-1, 5e-1, 7e-1, 1.0\\
+    \end{tabular}
+  }
+    \subtable[PennTreeBank]
+  {
+    \begin{tabular}{cc}
+      Learning Rate: & 1e-1, 1e-2, 1e-3, 2e-2\\
+      Hidden States: & 800, 1000, 1200, 1500, 2000\\
+      $\gamma$: & 1e-1, 3e-1, 5e-1, 7e-1, 1.0\\
+      Batch Sizes Size: &  32, 64, 100, 128\\
+    \end{tabular}
+  }
+    \subtable[Text8]
+  {
+    \begin{tabular}{cc}
+      Learning Rate: & 1e-1, 1e-2, 1e-3\\
+      Hidden States Size: & 500, 1000, 2000, 4000\\
+    \end{tabular}
+  }
+    \subtable[Attentive Reader]
+  {
+    \begin{tabular}{cc}
+      Learning Rate: & 8e-3, 8e-4, 8e-5, 8e-6\\
+      $\gamma$: & 60, 120, 240, 280\\
+    \end{tabular}
+  }
+
+  \caption{Hyperparameter values that have been explored in the experiments.}
+  \label{tab:hyperparams}
+
+\end{table}
 
 \end{document}
