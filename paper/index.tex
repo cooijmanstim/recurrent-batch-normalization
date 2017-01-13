@@ -730,12 +730,6 @@ learning rate to $8 \times 10^{-4}$ and the minibatch size to 40.
 
 Table~\ref{tab:hyperparams} reports hyperparameter values that were tried in the experiments.
 
-For MNIST and $p$MNIST, the hyperparameters were varied independently.
-For Penn Treebank, we performed a full grid search on learning rate and hidden state size, and later performed a sensitivity analysis on the batch size and initial $\gamma$.
-For the text8 task and the experiments with the Attentive Reader, we carried out a grid search on the learning rate and hidden state size.
-
-In each case, our reported results are those of the model with the best validation performance.
-
 \begin{table}[!hb]
 
   \subtable[MNIST and $p$MNIST]
@@ -752,7 +746,7 @@ In each case, our reported results are those of the model with the best validati
     \begin{tabular}{ll}
       Learning rate: & 1e-1, 1e-2, 2e-2, 1e-3\\
       Hidden state size: & 800, 1000, 1200, 1500, 2000\\
-      Batch size: &  32, 64, 100, 128\\
+      Batch size: & 32, 64, 100, 128\\
       Initial $\gamma$: & 1e-1, 3e-1, 5e-1, 7e-1, 1.0\\
     \end{tabular}
   }
@@ -775,5 +769,12 @@ In each case, our reported results are those of the model with the best validati
   \label{tab:hyperparams}
 
 \end{table}
+
+For MNIST and $p$MNIST, the hyperparameters were varied independently.
+For Penn Treebank, we performed a full grid search on learning rate and hidden state size, and later performed a sensitivity analysis on the batch size and initial $\gamma$.
+For the text8 task and the experiments with the Attentive Reader, we carried out a grid search on the learning rate and hidden state size.
+
+The same values were tried for both the baseline and our BN-LSTM.
+In each case, our reported results are those of the model with the best validation performance.
 
 \end{document}
