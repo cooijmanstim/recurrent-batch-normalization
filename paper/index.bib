@@ -3,10 +3,8 @@
                Christian Szegedy},
   title     = {Batch Normalization: Accelerating Deep Network Training by Reducing
                Internal Covariate Shift},
-  journal   = {CoRR},
   volume    = {abs/1502.03167},
   year      = {2015},
-  url       = {http://arxiv.org/abs/1502.03167},
   timestamp = {Mon, 02 Mar 2015 14:17:34 +0100},
   biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/IoffeS15},
   bibsource = {dblp computer science bibliography, http://dblp.org}
@@ -25,7 +23,6 @@
   journal   = {CoRR},
   volume    = {abs/1306.0514},
   year      = {2013},
-  url       = {http://arxiv.org/abs/1306.0514},
   timestamp = {Mon, 01 Jul 2013 20:31:24 +0200},
   biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/Ollivier13},
   bibsource = {dblp computer science bibliography, http://dblp.org}
@@ -71,7 +68,7 @@
 
 @article{baidu,
   title={Deep Speech 2: End-to-End Speech Recognition in English and Mandarin},
-  author={Amodei, D. and Anubhai, R. and Battenberg, E. and Case, C. and Casper, J. and Catanzaro, B. and Chen, J. and Chrzanowski, M. and Coates, A. and Diamos, G. and others},
+  author={Amodei, D. and others},
   journal={arXiv:1512.02595},
   year={2015}
 }
@@ -86,7 +83,7 @@
 @article{weightnorm,
   title={Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks},
   author={Salimans, Tim and Kingma, Diederik P},
-  journal={arXiv preprint arXiv:1602.07868},
+  journal={arXiv:1602.07868},
   year={2016}
 }
 
@@ -119,7 +116,7 @@
 @article{pascanudifficulty,
   title={On the difficulty of training recurrent neural networks},
   author={Pascanu, Razvan and Mikolov, Tomas and Bengio, Yoshua},
-  journal={arXiv preprint arXiv:1211.5063},
+  journal={arXiv:1211.5063},
   year={2012}
 }
 
@@ -157,33 +154,6 @@
   author={Hermann, K. M. and Kocisky, T. and Grefenstette, E. and Espeholt, L. and Kay, W. and Suleyman, M. and Blunsom, P.},
   booktitle={NIPS},
   year={2015}
-}
-
-@MISC{theano2,
-        author = {Bastien, Fr{\'{e}}d{\'{e}}ric and Lamblin, Pascal and Pascanu, Razvan and Bergstra, James and Goodfellow, Ian J. and Bergeron, Arnaud and Bouchard, Nicolas and Bengio, Yoshua},
-         title = {Theano: new features and speed improvements},
-          year = {2012},
-  howpublished = {Deep Learning and Unsupervised Feature Learning NIPS 2012 Workshop},
-      abstract = {Theano is a linear algebra compiler that optimizes a user’s symbolically-speciﬁed
-mathematical computations to produce efﬁcient low-level implementations. In
-this paper, we present new features and efﬁciency improvements to Theano, and
-benchmarks demonstrating Theano’s performance relative to Torch7, a recently
-introduced machine learning library, and to RNNLM, a C++ library targeted at
-recurrent neural networks.}
-}
-
-@INPROCEEDINGS{theano1,
-     author = {Bergstra, James and Breuleux, Olivier and Bastien, Fr{\'{e}}d{\'{e}}ric and Lamblin, Pascal and Pascanu, Razvan and Desjardins, Guillaume and Turian, Joseph and Warde-Farley, David and Bengio, Yoshua},
-      month = jun,
-      title = {Theano: a {CPU} and {GPU} Math Expression Compiler},
-  booktitle = {Proceedings of the Python for Scientific Computing Conference ({SciPy})},
-       year = {2010},
-   location = {Austin, TX},
-       note = {Oral Presentation},
-   abstract = {Theano is a compiler for mathematical expressions in Python that combines the convenience of NumPy’s syntax with the speed of optimized native machine language. The user composes mathematical expressions in a high-level description that mimics NumPy’s syntax and semantics, while being statically typed and
-functional (as opposed to imperative). These expressions allow Theano to provide symbolic differentiation. Before performing computation, Theano optimizes the choice of expressions, translates
-them into C++ (or CUDA for GPU), compiles them into dynamically loaded Python modules, all automatically. Common machine learning algorithms implemented with Theano are from 1.6× to 7.5× faster than competitive alternatives (including those implemented with C/C++, NumPy/SciPy and MATLAB) when compiled for the
-CPU and between 6.5× and 44× faster when compiled for the GPU. This paper illustrates how to use Theano, outlines the scope of the compiler, provides benchmarks on both CPU and GPU processors, and explains its overall design.}
 }
 
 @article{blocks,
@@ -296,7 +266,7 @@ CPU and between 6.5× and 44× faster when compiled for the GPU. This paper illu
 @article{pachitariu2013regularization,
   title={Regularization and nonlinearities for neural language models: when are they needed?},
   author={Pachitariu, Marius and Sahani, Maneesh},
-  journal={arXiv preprint arXiv:1301.5650},
+  journal={arXiv:1301.5650},
   year={2013}
 }
 
@@ -306,3 +276,51 @@ CPU and between 6.5× and 44× faster when compiled for the GPU. This paper illu
   journal={arXiv:1412.6980},
   year={2014}
 }
+
+@ARTICLE{theano,
+   author = { Team, The Theano Development and others },
+ collaboration = {Theano Development Team},
+    title = "{Theano: A {Python} framework for fast computation of mathematical expressions}",
+  journal = {arXiv e-prints},
+   volume = {abs/1605.02688},
+ primaryClass = "cs.SC",
+ keywords = {Computer Science - Symbolic Computation, Computer Science - Learning, Computer Science - Mathematical Software},
+     year = 2016,
+    month = may,
+}
+
+@article{krueger2016zoneout,
+  title={Zoneout: Regularizing RNNs by Randomly Preserving Hidden Activations},
+  author={Krueger, David and Maharaj, Tegan and Kram{\'a}r, J{\'a}nos and Pezeshki, Mohammad and Ballas, Nicolas and Ke, Nan Rosemary and Goyal, Anirudh and Bengio, Yoshua and Larochelle, Hugo and Courville, Aaron},
+  journal={arXiv:1606.01305},
+  year={2016}
+}
+
+@article{chung2016hierarchical,
+  title={Hierarchical Multiscale Recurrent Neural Networks},
+  author={Chung, Junyoung and Ahn, Sungjin and Bengio, Yoshua},
+  journal={arXiv:1609.01704},
+  year={2016}
+}
+
+@article{ha2016hypernetworks,
+  title={Hypernetworks},
+  author={Ha, David and Dai, Andrew and Le, Quoc V},
+  journal={arXiv:1609.09106},
+  year={2016}
+}
+
+@article{ba2016layer,
+  title={Layer normalization},
+  author={Ba, Jimmy Lei and Kiros, Jamie Ryan and Hinton, Geoffrey E},
+  journal={arXiv:1607.06450},
+  year={2016}
+}
+
+@article{liao2016bridging,
+  title={Bridging the Gaps Between Residual Learning, Recurrent Neural Networks and Visual Cortex},
+  author={Liao, Qianli and Poggio, Tomaso},
+  journal={arXiv:1604.03640},
+  year={2016}
+}
+
